@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# raw data sources (not needed at runtime, too large for GitHub)
+/SKT/
+/backup/
+/localdata.csv
+/locardatagangnam.csv
+
+# extra data variants in public/data — keep only stores.json + foottraffic.json
+/public/data/*.csv
+/public/data/stores-full*.json
+/public/data/stores-backup*.json
+/public/data/stores-sampled*.json
+
+# claude code session locks
+.claude/scheduled_tasks.lock
