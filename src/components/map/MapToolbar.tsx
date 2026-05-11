@@ -18,6 +18,10 @@ export default function MapToolbar({ allStores }: MapToolbarProps) {
   const setShowGoldenPins = useDashboardStore(
     (state) => state.setShowGoldenPins,
   );
+  const showWorstPins = useDashboardStore((state) => state.showWorstPins);
+  const setShowWorstPins = useDashboardStore(
+    (state) => state.setShowWorstPins,
+  );
   const setSelectedStore = useDashboardStore(
     (state) => state.setSelectedStore,
   );
@@ -26,6 +30,10 @@ export default function MapToolbar({ allStores }: MapToolbarProps) {
     (state) => state.setShowSECComparison,
   );
   const topSECByDong = useDashboardStore((state) => state.topSECByDong);
+  const worstByDong = useDashboardStore((state) => state.worstByDong);
+  const setMapTargetCoord = useDashboardStore(
+    (state) => state.setMapTargetCoord,
+  );
 
   const dongStores = useMemo(() => {
     return currentDong
@@ -99,6 +107,7 @@ export default function MapToolbar({ allStores }: MapToolbarProps) {
   }, [filteredStores]);
 
   const dongTopSEC = currentDong ? topSECByDong[currentDong] || [] : [];
+  const dongWorstSEC = currentDong ? worstByDong[currentDong] || [] : [];
 
   return (
     <div className="h-full flex flex-col bg-white">
@@ -275,6 +284,11 @@ export default function MapToolbar({ allStores }: MapToolbarProps) {
                       onClick={() => {
                         setSelectedSEC(sec);
                         setSelectedStore(null);
+                        setMapTargetCoord({
+                          lat: sec.lat,
+                          lng: sec.lng,
+                          zoom: 3,
+                        });
                       }}
                       className="w-full text-left p-3 bg-white rounded-lg border-2 border-yellow-200 hover:border-yellow-400 transition-all"
                     >
@@ -310,6 +324,67 @@ export default function MapToolbar({ allStores }: MapToolbarProps) {
             <p className="text-xs text-slate-500 text-center">
               {currentDong} SEC 분석 진행 중…
             </p>
+          </div>
+        )}
+
+        {currentDong && dongWorstSEC.length > 0 && (
+          <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-lg border-2 border-red-300 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-semibold text-red-900">
+                ⚠️ {currentDong} 최악 입지 TOP 3
+              </h3>
+              <button
+                onClick={() => {
+                  const next = !showWorstPins;
+                  console.log(
+                    `⚠️ 최악 토글: ${next}, 현재 동: ${currentDong}`,
+                  );
+                  setShowWorstPins(next);
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  showWorstPins ? "bg-red-700" : "bg-slate-300"
+                }`}
+                aria-label="최악 핀 토글"
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    showWorstPins ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {showWorstPins && (
+              <div className="space-y-2">
+                {dongWorstSEC.map((sec, index) => (
+                  <button
+                    key={sec.storeId}
+                    onClick={() => {
+                      setSelectedSEC(sec);
+                      setSelectedStore(null);
+                      setMapTargetCoord({
+                        lat: sec.lat,
+                        lng: sec.lng,
+                        zoom: 3,
+                      });
+                    }}
+                    className="w-full text-left p-3 bg-white rounded-lg border-2 border-red-200 hover:border-red-400 transition-all"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-red-600 text-white">
+                        {index + 1}
+                      </div>
+                      <span className="font-semibold text-sm text-slate-900 truncate">
+                        {sec.storeName}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-600">
+                      점수: {sec.totalScore} / 100
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

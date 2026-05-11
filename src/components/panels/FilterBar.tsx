@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useDashboardStore } from "@/store/useDashboardStore";
+import { getMarkerDesign } from "@/lib/marker-design";
 import type { Store } from "@/types";
 
 interface FilterBarProps {
@@ -69,15 +70,19 @@ export default function FilterBar({ allStores }: FilterBarProps) {
           전체 <span className="opacity-70">({dongStores.length})</span>
         </button>
 
-        {categories.map(({ name, count }) => (
-          <button
-            key={name}
-            onClick={() => setCategoryFilter(name)}
-            className={chipClass(categoryFilter === name)}
-          >
-            {name} <span className="opacity-70">({count})</span>
-          </button>
-        ))}
+        {categories.map(({ name, count }) => {
+          const design = getMarkerDesign(name);
+          return (
+            <button
+              key={name}
+              onClick={() => setCategoryFilter(name)}
+              className={chipClass(categoryFilter === name)}
+            >
+              <span className="mr-1">{design.icon}</span>
+              {name} <span className="opacity-70">({count})</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

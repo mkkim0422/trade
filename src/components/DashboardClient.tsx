@@ -19,6 +19,7 @@ export default function DashboardClient() {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const setTopSECByDong = useDashboardStore((state) => state.setTopSECByDong);
+  const setWorstByDong = useDashboardStore((state) => state.setWorstByDong);
   const selectedStore = useDashboardStore((state) => state.selectedStore);
   const selectedSEC = useDashboardStore((state) => state.selectedSEC);
   const showSECComparison = useDashboardStore(
@@ -40,40 +41,52 @@ export default function DashboardClient() {
         setLoadingProgress(40);
 
         const data: Store[] = await storesRes.json();
-        setLoadingProgress(70);
+        setLoadingProgress(60);
 
         setAllStores(data);
+        setLoadingProgress(70);
 
-        setTimeout(() => {
-          setLoadingProgress(100);
-          setIsLoading(false);
-        }, 200);
+        const byDong: Record<string, Store[]> = {};
+        data.forEach((store) => {
+          const dong = store.dong || "알 수 없음";
+          if (!byDong[dong]) byDong[dong] = [];
+          byDong[dong].push(store);
+        });
 
-        setTimeout(() => {
-          const byDong: Record<string, Store[]> = {};
-          data.forEach((store) => {
-            const dong = store.dong || "알 수 없음";
-            if (!byDong[dong]) byDong[dong] = [];
-            byDong[dong].push(store);
-          });
+        const dongEntries = Object.entries(byDong);
+        const topByDong: Record<string, SECScore[]> = {};
+        const worstByDong: Record<string, SECScore[]> = {};
+        let i = 0;
 
-          const secByDong: Record<string, SECScore[]> = {};
-          Object.entries(byDong).forEach(([dong, stores]) => {
-            const limited = stores.slice(0, SEC_PER_DONG_LIMIT);
-            const scores = calculateSECScoresWithFootTraffic(
-              limited,
-              foottrafficData,
-              250,
-              dong,
+        const processNextDong = () => {
+          if (i >= dongEntries.length) {
+            setTopSECByDong(topByDong);
+            setWorstByDong(worstByDong);
+            setLoadingProgress(100);
+            console.log(
+              `✅ 동별 SEC 계산 완료 (최적 + 최악): ${dongEntries.length}개 동`,
             );
-            secByDong[dong] = scores.slice(0, 3);
-          });
-
-          setTopSECByDong(secByDong);
-          console.log(
-            `✅ 동별 SEC 계산 완료 (유동인구 포함): ${Object.keys(secByDong).length}개 동`,
+            setTimeout(() => setIsLoading(false), 250);
+            return;
+          }
+          const [dong, stores] = dongEntries[i];
+          const limited = stores.slice(0, SEC_PER_DONG_LIMIT);
+          const result = calculateSECScoresWithFootTraffic(
+            limited,
+            foottrafficData,
+            250,
+            dong,
           );
-        }, 1000);
+          topByDong[dong] = result.top3;
+          worstByDong[dong] = result.bottom3;
+          i++;
+          setLoadingProgress(
+            70 + Math.round((i / dongEntries.length) * 28),
+          );
+          setTimeout(processNextDong, 0);
+        };
+
+        setTimeout(processNextDong, 0);
       } catch (err) {
         console.error("데이터 로드 실패:", err);
         setIsLoading(false);
@@ -81,7 +94,7 @@ export default function DashboardClient() {
     };
 
     loadData();
-  }, [setTopSECByDong]);
+  }, [setTopSECByDong, setWorstByDong]);
 
   if (isLoading) {
     return (

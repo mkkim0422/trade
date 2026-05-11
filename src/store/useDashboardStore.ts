@@ -38,6 +38,17 @@ interface DashboardState {
 
   topSECByDong: Record<string, SECScore[]>;
   setTopSECByDong: (data: Record<string, SECScore[]>) => void;
+
+  worstByDong: Record<string, SECScore[]>;
+  setWorstByDong: (data: Record<string, SECScore[]>) => void;
+
+  showWorstPins: boolean;
+  setShowWorstPins: (show: boolean) => void;
+
+  mapTargetCoord: { lat: number; lng: number; zoom?: number } | null;
+  setMapTargetCoord: (
+    coord: { lat: number; lng: number; zoom?: number } | null,
+  ) => void;
 }
 
 export const useDashboardStore = create<DashboardState>((set) => ({
@@ -70,4 +81,13 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
   topSECByDong: {},
   setTopSECByDong: (data) => set({ topSECByDong: data }),
+
+  worstByDong: {},
+  setWorstByDong: (data) => set({ worstByDong: data }),
+
+  showWorstPins: false,
+  setShowWorstPins: (show) => set({ showWorstPins: show }),
+
+  mapTargetCoord: null,
+  setMapTargetCoord: (coord) => set({ mapTargetCoord: coord }),
 }));

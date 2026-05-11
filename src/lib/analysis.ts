@@ -176,7 +176,13 @@ export interface SECScore {
   vacancyScore?: number;
   longTermScore?: number;
   areaScore?: number;
+  kind?: "best" | "worst";
   reasoning: string;
+}
+
+export interface SECResult {
+  top3: SECScore[];
+  bottom3: SECScore[];
 }
 
 export function calculateSECScores(
@@ -287,9 +293,9 @@ export function calculateSECScoresWithFootTraffic(
   foottrafficData: FootTrafficData[],
   radius: number = 250,
   dongLabel?: string,
-): SECScore[] {
+): SECResult {
   console.log(
-    `🏆 ${dongLabel ? `[${dongLabel}] ` : ""}SEC 분석 시작: 8가지 지표`,
+    `🏆 ${dongLabel ? `[${dongLabel}] ` : ""}SEC 분석 시작: 8가지 지표 (최적 + 최악)`,
   );
 
   const scores: SECScore[] = [];
@@ -307,7 +313,6 @@ export function calculateSECScoresWithFootTraffic(
     });
 
     const nearbyCount = nearbyStores.length;
-    if (nearbyCount > 60) return;
 
     let ludScore = 100;
     if (nearbyCount >= 50) ludScore = 10;
@@ -498,10 +503,34 @@ export function calculateSECScoresWithFootTraffic(
 
   scores.sort((a, b) => b.totalScore - a.totalScore);
 
-  console.log(
-    `🏆 ${dongLabel ? `[${dongLabel}] ` : ""}SEC TOP 3:`,
-  );
-  scores.slice(0, 3).forEach((s, i) => {
+  const MIN_PIN_DISTANCE = 100;
+  const pickSpread = (sorted: SECScore[]): SECScore[] => {
+    const picked: SECScore[] = [];
+    for (const candidate of sorted) {
+      if (picked.length >= 3) break;
+      const tooClose = picked.some(
+        (p) =>
+          getDistance(p.lat, p.lng, candidate.lat, candidate.lng) <
+          MIN_PIN_DISTANCE,
+      );
+      if (!tooClose) picked.push(candidate);
+    }
+    while (picked.length < 3 && sorted.length > picked.length) {
+      const fallback = sorted.find((s) => !picked.includes(s));
+      if (!fallback) break;
+      picked.push(fallback);
+    }
+    return picked;
+  };
+
+  const top3 = pickSpread(scores).map((s) => ({ ...s, kind: "best" as const }));
+  const bottom3 = pickSpread([...scores].reverse()).map((s) => ({
+    ...s,
+    kind: "worst" as const,
+  }));
+
+  console.log(`🏆 ${dongLabel ? `[${dongLabel}] ` : ""}SEC TOP 3 (최적):`);
+  top3.forEach((s, i) => {
     console.log(`\n${i + 1}위: ${s.storeName} (총점 ${s.totalScore})`);
     console.log(
       `  입지 ${s.ludScore} (25%) + 상권 ${s.segScore} (15%) + 추세 ${s.trendScore} (12%) + 유동 ${s.foottrafficScore} (20%)`,
@@ -509,10 +538,19 @@ export function calculateSECScoresWithFootTraffic(
     console.log(
       `  + 업종 ${s.categoryScore} (12%) + 공실 ${s.vacancyScore} (8%) + 장수 ${s.longTermScore} (5%) + 면적 ${s.areaScore} (3%)`,
     );
-    console.log(`  → 가중 총점: ${s.totalScore}`);
   });
 
-  return scores.slice(0, 3);
+  console.log(
+    `\n⚠️ ${dongLabel ? `[${dongLabel}] ` : ""}SEC BOTTOM 3 (최악):`,
+  );
+  bottom3.forEach((s, i) => {
+    console.log(`\n${i + 1}위(최악): ${s.storeName} (총점 ${s.totalScore})`);
+    console.log(
+      `  입지 ${s.ludScore} + 상권 ${s.segScore} + 추세 ${s.trendScore} + 유동 ${s.foottrafficScore} + 업종 ${s.categoryScore} + 공실 ${s.vacancyScore} + 장수 ${s.longTermScore} + 면적 ${s.areaScore}`,
+    );
+  });
+
+  return { top3, bottom3 };
 }
 
 interface ReasoningInputs {

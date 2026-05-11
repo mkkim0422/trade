@@ -78,13 +78,17 @@ export function createMarkerHTML(
   const design = getMarkerDesign(category);
   const border = isSelected ? "4px solid #FFD700" : "3px solid white";
 
+  // drop-shadow filter는 합성기(compositor)에서 매 프레임 재래스터화되므로
+  // 카카오 맵 드래그 시 100개 마커가 동시에 GPU를 점유해 버벅임을 유발.
+  // box-shadow로 대체하여 합성 레이어 캐싱이 가능하도록 함.
+  // will-change: transform으로 마커당 GPU 레이어 격리.
   return `
-    <div class="pinterest-marker" style="position:relative;width:44px;height:54px;cursor:pointer;filter:drop-shadow(0 4px 8px ${design.shadowColor});transition:all 0.2s ease;">
-      <div style="position:absolute;top:0;left:0;width:44px;height:44px;background:${design.bgColor};border:${border};border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;">
-        <span style="font-size:22px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2));">${design.icon}</span>
+    <div class="pinterest-marker" style="position:relative;width:44px;height:54px;cursor:pointer;will-change:transform;transition:transform 0.2s ease,filter 0.2s ease;">
+      <div style="position:absolute;top:0;left:0;width:44px;height:44px;background:${design.bgColor};border:${border};border-radius:50%;box-shadow:0 4px 8px ${design.shadowColor},0 2px 4px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;pointer-events:none;">
+        <span style="font-size:22px;line-height:1;pointer-events:none;">${design.icon}</span>
       </div>
-      <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:12px solid ${design.bgColor};filter:drop-shadow(0 2px 3px rgba(0,0,0,0.1));"></div>
-      ${isSelected ? `<div style="position:absolute;top:-4px;left:-4px;width:52px;height:52px;border:3px solid #FFD700;border-radius:50%;animation:pulsering 1.5s ease-in-out infinite;"></div>` : ""}
+      <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:12px solid ${design.bgColor};pointer-events:none;"></div>
+      ${isSelected ? `<div style="position:absolute;top:-4px;left:-4px;width:52px;height:52px;border:3px solid #FFD700;border-radius:50%;animation:pulsering 1.5s ease-in-out infinite;pointer-events:none;"></div>` : ""}
     </div>
   `;
 }

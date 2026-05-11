@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>폐업점포 기준 신규출점 분석 — Pitch Deck</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
+                 "Malgun Gothic", "Noto Sans KR", "Pretendard", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: #0F172A;
+  }
+  body { background: #FAFAFA; overflow: hidden; }
+
+  .deck { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 56px 72px 96px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.35s ease;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .slide-inner { max-width: 1180px; width: 100%; }
+
+  /* Common typography */
+  .eyebrow {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.18em;
+    text-transform: uppercase; color: #1E40AF; margin-bottom: 16px;
+  }
+  h1 { font-size: 64px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; }
+  h2 { font-size: 44px; font-weight: 800; line-height: 1.15; letter-spacing: -0.015em; margin-bottom: 12px; }
+  h3 { font-size: 22px; font-weight: 700; line-height: 1.3; }
+  p, li { font-size: 18px; line-height: 1.65; color: #334155; }
+  .lead { font-size: 22px; line-height: 1.6; color: #475569; }
+
+  /* Slide 1: Title */
+  .title-slide { text-align: left; }
+  .title-slide .badge {
+    display: inline-block; padding: 6px 14px;
+    background: #DBEAFE; color: #1E40AF;
+    font-size: 12px; font-weight: 700; border-radius: 999px;
+    letter-spacing: 0.1em; margin-bottom: 24px;
+  }
+  .title-slide h1 { color: #0F172A; }
+  .title-slide .sub { font-size: 26px; color: #475569; margin-top: 18px; font-weight: 500; }
+  .title-slide .meta { margin-top: 48px; color: #94A3B8; font-size: 14px; }
+
+  /* Slide 2: Problem */
+  .problem-slide blockquote {
+    font-size: 38px; font-weight: 700;
+    color: #0F172A; border-left: 5px solid #DC2626;
+    padding: 14px 0 14px 28px; margin: 24px 0 32px;
+    line-height: 1.3;
+  }
+  .problem-slide .points { display: grid; gap: 18px; margin-top: 24px; }
+  .problem-slide .point {
+    padding: 22px; background: white;
+    border: 1px solid #E2E8F0; border-radius: 12px;
+  }
+  .problem-slide .point strong { color: #DC2626; font-weight: 700; }
+
+  /* Slide 3: Solution */
+  .three-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 32px; }
+  .three-cards .card {
+    background: white; padding: 28px; border-radius: 14px;
+    border: 1px solid #E2E8F0;
+  }
+  .three-cards .card .num {
+    display: inline-block; width: 36px; height: 36px;
+    background: #1E40AF; color: white;
+    border-radius: 50%; line-height: 36px; text-align: center;
+    font-weight: 800; margin-bottom: 14px;
+  }
+  .three-cards .card h3 { margin-bottom: 8px; color: #0F172A; }
+  .three-cards .card p { font-size: 16px; }
+
+  /* Slide 4: Differentiation */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 28px; }
+  .compare .col {
+    background: white; padding: 32px; border-radius: 14px;
+    border: 1px solid #E2E8F0;
+  }
+  .compare .col.them { opacity: 0.7; }
+  .compare .col.us { border: 2px solid #1E40AF; box-shadow: 0 6px 24px rgba(30, 64, 175, 0.12); }
+  .compare h3 { margin-bottom: 14px; }
+  .compare ul { list-style: none; }
+  .compare li { padding: 8px 0; padding-left: 26px; position: relative; }
+  .compare .col.them li::before {
+    content: "✕"; position: absolute; left: 0; color: #94A3B8; font-weight: 700;
+  }
+  .compare .col.us li::before {
+    content: "✓"; position: absolute; left: 0; color: #1E40AF; font-weight: 800;
+  }
+
+  /* Slide 5: Product layout */
+  .layout-mock {
+    display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 14px;
+    height: 360px; margin-top: 28px;
+    border-radius: 12px; overflow: hidden;
+    border: 1px solid #E2E8F0; background: white;
+  }
+  .layout-mock > div {
+    padding: 18px; position: relative; overflow: hidden;
+  }
+  .layout-mock .lp { background: #F8FAFC; border-right: 1px solid #E2E8F0; }
+  .layout-mock .map {
+    background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .layout-mock .rp { background: #F8FAFC; border-left: 1px solid #E2E8F0; }
+  .layout-mock h4 { font-size: 14px; font-weight: 700; color: #1E40AF; margin-bottom: 8px; }
+  .layout-mock ul { list-style: none; font-size: 13px; color: #475569; }
+  .layout-mock li { padding: 4px 0; }
+  .pin-mock {
+    position: absolute; width: 26px; height: 32px;
+    transform-origin: bottom center;
+  }
+  .pin-mock .body {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 800; font-size: 13px;
+  }
+  .pin-mock.gold .body { background: linear-gradient(135deg, #FFD700, #FFA500); }
+  .pin-mock.red .body { background: linear-gradient(135deg, #7F1D1D, #DC2626); }
+  .pin-mock.cat .body { background: #FF6B35; }
+  .pin-mock.cat2 .body { background: #FF1493; }
+  .pin-mock.cat3 .body { background: #92400E; }
+
+  /* Slide 6: 8 indicators */
+  .ind-bars { margin-top: 28px; display: grid; gap: 10px; }
+  .ind-row {
+    display: grid; grid-template-columns: 200px 1fr 60px;
+    align-items: center; gap: 16px;
+  }
+  .ind-row .label { font-weight: 700; font-size: 16px; color: #0F172A; }
+  .ind-row .label .desc { display: block; font-size: 12px; font-weight: 500; color: #64748B; margin-top: 2px; }
+  .ind-row .bar { height: 12px; background: #E2E8F0; border-radius: 6px; overflow: hidden; }
+  .ind-row .bar > span { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, #3B82F6, #1E40AF); }
+  .ind-row .pct { font-weight: 700; color: #1E40AF; text-align: right; }
+
+  /* Slide 7: Best card mock */
+  .sec-card {
+    margin-top: 28px;
+    background: linear-gradient(135deg, #FEF3C7 0%, #FED7AA 100%);
+    border: 2px solid #F59E0B;
+    border-radius: 16px; padding: 24px;
+    display: grid; grid-template-columns: 60px 1fr; gap: 18px;
+  }
+  .sec-card.worst {
+    background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+    border-color: #DC2626;
+  }
+  .sec-card .avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, #F59E0B, #EA580C);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 28px; font-weight: 800;
+  }
+  .sec-card.worst .avatar {
+    background: linear-gradient(135deg, #7F1D1D, #DC2626);
+  }
+  .sec-card h4 { font-size: 18px; font-weight: 800; color: #78350F; }
+  .sec-card.worst h4 { color: #7F1D1D; }
+  .sec-card .name { font-weight: 700; font-size: 16px; color: #0F172A; margin-top: 8px; }
+  .sec-card .grid {
+    margin-top: 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    background: white; padding: 14px; border-radius: 10px;
+  }
+  .sec-card .grid .cell { text-align: center; }
+  .sec-card .grid .cell .v { font-size: 20px; font-weight: 800; }
+  .sec-card .grid .cell .l { font-size: 11px; color: #64748B; }
+  .sec-card .grid .cell .v.blue { color: #3B82F6; }
+  .sec-card .grid .cell .v.green { color: #10B981; }
+  .sec-card .grid .cell .v.purple { color: #8B5CF6; }
+  .sec-card .grid .cell .v.orange { color: #F97316; }
+  .sec-card .reason {
+    margin-top: 12px; font-size: 14px; color: #475569; line-height: 1.6;
+    background: white; padding: 12px 14px; border-radius: 8px;
+  }
+
+  /* Slide 9: Data sources */
+  .data-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 28px; }
+  .data-grid .item { background: white; padding: 22px; border-radius: 12px; border: 1px solid #E2E8F0; }
+  .data-grid .item .src { font-size: 12px; font-weight: 700; color: #1E40AF; letter-spacing: 0.1em; }
+  .data-grid .item h3 { margin-top: 8px; font-size: 18px; }
+  .data-grid .item p { font-size: 14px; margin-top: 8px; }
+  .data-grid .item .stat { font-size: 28px; font-weight: 800; color: #0F172A; margin-top: 12px; }
+
+  /* Slide 10: Tech */
+  .tech-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 32px; }
+  .tech-grid .tag {
+    background: white; border: 1px solid #E2E8F0; border-radius: 10px;
+    padding: 18px; text-align: center;
+  }
+  .tech-grid .tag .name { font-weight: 800; color: #0F172A; }
+  .tech-grid .tag .role { font-size: 12px; color: #64748B; margin-top: 4px; }
+
+  /* Slide 11: CTA */
+  .cta-slide { text-align: center; }
+  .cta-slide h2 { font-size: 56px; }
+  .cta-slide .lead { margin: 24px auto 40px; max-width: 720px; font-size: 24px; }
+  .cta-slide .url {
+    display: inline-block; font-family: "SF Mono", Menlo, Consolas, monospace;
+    background: #0F172A; color: #FFFFFF; padding: 16px 28px;
+    border-radius: 10px; font-size: 18px; font-weight: 600;
+  }
+  .cta-slide .footer-meta { margin-top: 40px; color: #94A3B8; font-size: 14px; }
+
+  /* Navigation */
+  .nav {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 16px;
+    background: rgba(15, 23, 42, 0.92); color: white;
+    padding: 10px 18px; border-radius: 999px;
+    backdrop-filter: blur(8px);
+    z-index: 100;
+  }
+  .nav button {
+    background: transparent; color: white; border: none;
+    font-size: 14px; font-weight: 600; padding: 6px 12px;
+    border-radius: 6px; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .nav button:hover { background: rgba(255,255,255,0.12); }
+  .nav button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .nav .counter {
+    font-size: 13px; font-weight: 600; min-width: 64px; text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Progress bar */
+  .progress {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 3px; background: transparent; z-index: 90;
+  }
+  .progress > span {
+    display: block; height: 100%;
+    background: linear-gradient(90deg, #3B82F6, #1E40AF);
+    transition: width 0.35s ease;
+    width: 8.33%;
+  }
+
+  /* Slide number */
+  .slide-num {
+    position: fixed; top: 18px; right: 24px;
+    font-size: 12px; font-weight: 600; color: #94A3B8;
+    letter-spacing: 0.15em;
+    z-index: 90;
+  }
+
+  /* Helpers */
+  .row { display: flex; align-items: center; gap: 16px; }
+  .pill {
+    display: inline-block; padding: 4px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.05em;
+  }
+  .pill.blue { background: #DBEAFE; color: #1E40AF; }
+  .pill.amber { background: #FEF3C7; color: #92400E; }
+  .pill.red { background: #FEE2E2; color: #991B1B; }
+</style>
+</head>
+<body>
+
+<div class="progress"><span id="progress-fill"></span></div>
+<div class="slide-num"><span id="slide-num">01</span> / 11</div>
+
+<div class="deck">
+
+  <!-- Slide 1: Title -->
+  <section class="slide active">
+    <div class="slide-inner title-slide">
+      <span class="badge">MVP v1.0 · 2026.04</span>
+      <h1>폐업점포 기준<br>신규출점 분석</h1>
+      <p class="sub">"여기 망할 수도 있다" 를 데이터로 진단하는<br>대형 프랜차이즈 점포개발팀 전용 GIS 시스템</p>
+      <div class="meta">Strategic Entry Analysis System · 강남구 일반음식점 · LOCALDATA × SKT 유동인구</div>
+    </div>
+  </section>
+
+  <!-- Slide 2: Problem -->
+  <section class="slide">
+    <div class="slide-inner problem-slide">
+      <div class="eyebrow">Problem</div>
+      <h2>출점 의사결정의<br>마지막 10%를 보완한다.</h2>
+      <blockquote>"여기 차리면 잘 될까?"</blockquote>
+      <div class="points">
+        <div class="point">매출 데이터는 사후. <strong>폐업 데이터는 신호.</strong> 그러나 점포개발팀이 폐업 패턴을 입지 평가에 통합한 도구는 시장에 없다.</div>
+        <div class="point">평당 매출 추정 / 카드 결제 추이 / 인구 통계는 흔하다. <strong>"이 동네에서 왜 망하는지"</strong> 를 보여주는 도구는 없다.</div>
+        <div class="point">폐업 매장 = 위험 시그널이자, <strong>이미 검증된 재출점 후보지.</strong> 둘을 동시에 보지 못해 의사결정이 한쪽으로 치우친다.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 3: Solution -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow">Solution</div>
+      <h2>폐업 데이터를 자산화하는<br>GIS 분석 엔진.</h2>
+      <p class="lead">LOCALDATA 폐업 매장 + SKT 유동인구를 8가지 지표로 융합 → 카카오맵 위에 시각화 → 즉시 진단.</p>
+      <div class="three-cards">
+        <div class="card">
+          <div class="num">1</div>
+          <h3>폐업 자산화</h3>
+          <p>LOCALDATA 강남구 일반음식점 폐업 매장을 모두 수집·지오코딩. 행정동 단위로 분류해 위험도 산출의 근거로 활용.</p>
+        </div>
+        <div class="card">
+          <div class="num">2</div>
+          <h3>8지표 SEC 산출</h3>
+          <p>입지 안전도·상권 안정성·추세·유동인구 등 8지표를 가중 평균. 동별 최적 입지 / 최악 입지 TOP 3 자동 도출.</p>
+        </div>
+        <div class="card">
+          <div class="num">3</div>
+          <h3>인터랙티브 GIS</h3>
+          <p>업태별 컬러 마커 + 핀 클릭 시 8지표 점수와 추천/경고 이유를 자동 생성된 자연어로 즉시 표시.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 4: Differentiation -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow">Differentiation</div>
+      <h2>경쟁 도구는 "성공할 곳"을 추천한다.<br>이 시스템은 <span style="color:#DC2626">"망할 곳"</span>을 경고한다.</h2>
+      <div class="compare">
+        <div class="col them">
+          <h3 style="color:#64748B">기존 상권분석 도구</h3>
+          <ul>
+            <li>매출 추정 · 카드 결제 데이터 중심</li>
+            <li>"여기가 좋다"는 일방적 추천</li>
+            <li>폐업률은 주거지 단위 통계만 제공</li>
+            <li>업태별 생존율은 별도 리서치 필요</li>
+            <li>출점 후 모니터링 도구 따로</li>
+          </ul>
+        </div>
+        <div class="col us">
+          <h3 style="color:#1E40AF">폐업점포 기준 신규출점 분석</h3>
+          <ul>
+            <li>폐업 데이터를 1차 자산으로 활용</li>
+            <li>최적 / 최악 입지 동시 가시화</li>
+            <li>매장 단위 250m 반경 폐업 밀도</li>
+            <li>업태별 장기 생존율 자동 산출</li>
+            <li>SKT 유동인구 통합으로 실수요 검증</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 5: Product -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow">Product</div>
+      <h2>3-Panel 인터랙티브 대시보드</h2>
+      <p class="lead">좌패널 상세 · 중앙 지도 · 우패널 통계. 모든 작업이 한 화면에서 끝난다.</p>
+      <div class="layout-mock">
+        <div class="lp">
+          <h4>좌패널 — 매장 상세</h4>
+          <ul>
+            <li>· 기본 정보 / 영업기간</li>
+            <li>· LUD 입지 안전도</li>
+            <li>· SEG 상권 안정성</li>
+            <li>· Trend 추세 분석</li>
+            <li>· 유동인구 (주중/주말)</li>
+            <li>· 추천/경고 자연어</li>
+          </ul>
+        </div>
+        <div class="map">
+          <div class="pin-mock cat" style="top:30%; left:20%"><div class="body">🍚</div></div>
+          <div class="pin-mock cat2" style="top:55%; left:35%"><div class="body">🍣</div></div>
+          <div class="pin-mock cat3" style="top:38%; left:60%"><div class="body">☕</div></div>
+          <div class="pin-mock gold" style="top:48%; left:48%"><div class="body">1</div></div>
+          <div class="pin-mock gold" style="top:65%; left:55%"><div class="body">2</div></div>
+          <div class="pin-mock gold" style="top:35%; left:75%"><div class="body">3</div></div>
+          <div class="pin-mock red" style="top:70%; left:25%"><div class="body">1</div></div>
+          <div style="position:absolute; bottom:14px; left:50%; transform:translateX(-50%); font-size:11px; color:#64748B; background:white; padding:4px 10px; border-radius:999px; border:1px solid #E2E8F0;">📍 역삼1동 · 폐업 487개</div>
+        </div>
+        <div class="rp">
+          <h4>우패널 — 통계 도구</h4>
+          <ul>
+            <li>· 업태별 분포 TOP5</li>
+            <li>· 연도별 폐업 추이</li>
+            <li>· 히트맵 토글</li>
+            <li>· 🏆 최적 입지 TOP3</li>
+            <li>· ⚠️ 최악 입지 TOP3</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 6: 8 Indicators -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow">Methodology</div>
+      <h2>8가지 지표 가중 총점으로<br>SEC 산출.</h2>
+      <p class="lead">모든 지표가 데이터 기반. Mock·추정 표현은 별도 배지로 명시.</p>
+      <div class="ind-bars">
+        <div class="ind-row">
+          <div class="label">입지 안전도 (LUD)<span class="desc">반경 250m 내 폐업 매장 밀도</span></div>
+          <div class="bar"><span style="width:100%"></span></div>
+          <div class="pct">25%</div>
+        </div>
+        <div class="ind-row">
+          <div class="label">유동인구<span class="desc">SKT V_POP 일평균 (주중/주말 분리)</span></div>
+          <div class="bar"><span style="width:80%"></span></div>
+          <div class="pct">20%</div>
+        </div>
+        <div class="ind-row">
+          <div class="label">상권 안정성 (SEG)<span class="desc">주변 매장 평균 영업기간</span></div>
+          <div class="bar"><span style="width:60%"></span></div>
+          <div class="pct">15%</div>
+        </div>
+        <div class="ind-row">
+          <div class="label">추세 점수<span class="desc">최근 3개월 vs 1년 폐업 가속도</span></div>
+          <div class="bar"><span style="width:48%"></span></div>
+          <div class="pct">12%</div>
+        </div>
+        <div class="ind-row">
+          <div class="label">업종 적합도<span class="desc">동일 업종 장기 생존율</span></div>
+          <div class="bar"><span style="width:48%"></span></div>
+          <div class="pct">12%</div>
+        </div>
+        <div class="ind-row">
+          <div class="label">공실 시기<span class="desc">폐업 후 경과 개월 (협상 적기)</span></div>
+          <div class="bar"><span style="width:32%"></span></div>
+          <div class="pct">8%</div>
+        </div>
+        <div class="ind-row">
+          <div class="label">장수 매장<span class="desc">5년+ 영업 매장 비율</span></div>
+          <div class="bar"><span style="width:20%"></span></div>
+          <div class="pct">5%</div>
+        </div>
+        <div class="ind-row">
+          <div class="label">면적 적정성<span class="desc">매장 면적 적정 구간 평가</span></div>
+          <div class="bar"><span style="width:12%"></span></div>
+          <div class="pct">3%</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 7: Best TOP3 -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow">Feature · Best</div>
+      <h2><span style="color:#F59E0B">🏆 최적 입지 TOP 3</span></h2>
+      <p class="lead">동별 8지표 가중 총점 상위 3곳. 황금 핀 + 자동 줌 + 자연어 추천 이유.</p>
+      <div class="sec-card">
+        <div class="avatar">🏆</div>
+        <div>
+          <h4>최적 입지 — Strategic Entry Candidate</h4>
+          <div class="name">미가네식당 (역삼1동)</div>
+          <div class="grid">
+            <div class="cell"><div class="v blue">95</div><div class="l">입지 안전도</div></div>
+            <div class="cell"><div class="v green">82</div><div class="l">상권 안정성</div></div>
+            <div class="cell"><div class="v purple">80</div><div class="l">추세 점수</div></div>
+            <div class="cell"><div class="v green">85</div><div class="l">유동인구</div></div>
+            <div class="cell"><div class="v green">85</div><div class="l">업종 적합도</div></div>
+            <div class="cell"><div class="v blue">100</div><div class="l">공실 시기</div></div>
+            <div class="cell"><div class="v green">85</div><div class="l">장수 매장</div></div>
+            <div class="cell"><div class="v blue">100</div><div class="l">면적 적정성</div></div>
+          </div>
+          <div class="reason">반경 250m 내 폐업 매장이 단 3개로 경쟁 공백 상태. 주변 매장 중 65%가 5년 이상 영업해 상권 검증 완료. 일평균 유동인구 18,200명 (주중 19,400명, 주말 16,800명). 폐업 후 2개월로 임대 협상에 유리한 시점.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 8: Worst TOP3 -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow">Feature · Worst</div>
+      <h2><span style="color:#DC2626">⚠️ 최악 입지 TOP 3</span></h2>
+      <p class="lead">같은 알고리즘으로 하위 3곳을 식별. 출점 회피용 빨강 핀 — 100m 공간 분산 알고리즘으로 클러스터 중복 제거.</p>
+      <div class="sec-card worst">
+        <div class="avatar">⚠️</div>
+        <div>
+          <h4>최악 입지 — Strategic Avoidance Candidate</h4>
+          <div class="name">○○ 한식당 (테헤란로 인근)</div>
+          <div class="grid">
+            <div class="cell"><div class="v orange">10</div><div class="l">입지 안전도</div></div>
+            <div class="cell"><div class="v orange">25</div><div class="l">상권 안정성</div></div>
+            <div class="cell"><div class="v orange">40</div><div class="l">추세 점수</div></div>
+            <div class="cell"><div class="v purple">55</div><div class="l">유동인구</div></div>
+            <div class="cell"><div class="v orange">40</div><div class="l">업종 적합도</div></div>
+            <div class="cell"><div class="v orange">40</div><div class="l">공실 시기</div></div>
+            <div class="cell"><div class="v orange">40</div><div class="l">장수 매장</div></div>
+            <div class="cell"><div class="v green">80</div><div class="l">면적 적정성</div></div>
+          </div>
+          <div class="reason">반경 250m 내 폐업 53개로 고밀도 경쟁 지역. 평균 영업기간 1.8년으로 매우 짧음. 최근 폐업 가속화 추세. 한식 업종의 동일 상권 장기 생존율 12% — 독창적 컨셉 없이는 위험.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 9: Data -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow">Data Sources</div>
+      <h2>모든 결정은 실데이터 위에서.</h2>
+      <p class="lead">정부 공공데이터 + 통신사 유동인구 + 카카오 지오코딩 결합.</p>
+      <div class="data-grid">
+        <div class="item">
+          <div class="src">PUBLIC · LOCALDATA</div>
+          <h3>강남구 일반음식점</h3>
+          <p>2024.10 기준 영업/폐업 매장 전체. 행정코드 11680, 22개 행정동 매핑.</p>
+          <div class="stat">10,000+ 매장</div>
+        </div>
+        <div class="item">
+          <div class="src">SKT · 통신 빅데이터</div>
+          <h3>유동인구 격자 데이터</h3>
+          <p>2024-2025 강남구 격자별 V_POP. 주중/주말 분리, 반경 250m 평균 산출.</p>
+          <div class="stat">15,000+ 격자</div>
+        </div>
+        <div class="item">
+          <div class="src">KAKAO · GIS API</div>
+          <h3>지오코딩 + 지도 SDK</h3>
+          <p>주소 → 좌표 변환. 인터랙티브 지도 렌더링 + CustomOverlay 마커 시스템.</p>
+          <div class="stat">10,000+ 좌표</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 10: Tech Stack -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="eyebrow">Tech Stack</div>
+      <h2>현대적·확장 가능한 풀스택.</h2>
+      <p class="lead">App Router 기반 SSR + 클라이언트 인터랙션 최적화.</p>
+      <div class="tech-grid">
+        <div class="tag"><div class="name">Next.js 15</div><div class="role">App Router · SSR</div></div>
+        <div class="tag"><div class="name">TypeScript</div><div class="role">타입 안전성</div></div>
+        <div class="tag"><div class="name">Tailwind CSS</div><div class="role">디자인 시스템</div></div>
+        <div class="tag"><div class="name">Zustand</div><div class="role">전역 상태</div></div>
+        <div class="tag"><div class="name">Kakao Map SDK</div><div class="role">GIS 렌더링</div></div>
+        <div class="tag"><div class="name">CustomOverlay</div><div class="role">업태별 마커</div></div>
+        <div class="tag"><div class="name">React.memo + Refs</div><div class="role">성능 최적화</div></div>
+        <div class="tag"><div class="name">Vercel</div><div class="role">배포·CDN</div></div>
+      </div>
+      <div class="row" style="margin-top:32px; gap:10px; flex-wrap:wrap;">
+        <span class="pill blue">차분 마커 업데이트</span>
+        <span class="pill blue">중심 기준 100개 렌더링</span>
+        <span class="pill blue">줌 변경 시 깜빡임 0</span>
+        <span class="pill blue">동 자동 감지 (debounce 300ms)</span>
+        <span class="pill blue">8지표 점수 가중 평균</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 11: CTA -->
+  <section class="slide">
+    <div class="slide-inner cta-slide">
+      <div class="eyebrow">Live Now</div>
+      <h2>지금 바로<br>탐색해보세요.</h2>
+      <p class="lead">강남구  · 10,000+ 매장 · 8지표 SEC 산출 </p>
+      <div class="url">https://trade-eta-two.vercel.app</div>
+      <div class="footer-meta">
+        © 2026 Strategic Entry Analysis · MVP v1.0<br>
+        데이터: LOCALDATA 2024.10 · SKT V_POP 2024-2025 · KAKAO GIS
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <button id="prev">← 이전</button>
+  <span class="counter" id="counter">1 / 12</span>
+  <button id="next">다음 →</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const counterEl = document.getElementById('counter');
+  const numEl = document.getElementById('slide-num');
+  const fillEl = document.getElementById('progress-fill');
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  let current = 0;
+
+  function show(idx) {
+    if (idx < 0 || idx >= total) return;
+    slides[current].classList.remove('active');
+    current = idx;
+    slides[current].classList.add('active');
+    counterEl.textContent = `${current + 1} / ${total}`;
+    numEl.textContent = String(current + 1).padStart(2, '0');
+    fillEl.style.width = `${((current + 1) / total) * 100}%`;
+    prevBtn.disabled = current === 0;
+    nextBtn.disabled = current === total - 1;
+  }
+
+  prevBtn.addEventListener('click', () => show(current - 1));
+  nextBtn.addEventListener('click', () => show(current + 1));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(current + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(current - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(total - 1);
+  });
+
+  show(0);
+</script>
+
+</body>
+</html>

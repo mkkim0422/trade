@@ -12,9 +12,13 @@ import type { Store } from "@/types";
 const INITIAL_CENTER = { lat: 37.5007, lng: 127.0368 };
 const INITIAL_DONG = "역삼1동";
 const DEFAULT_ZOOM = 3;
-const NEAREST_MARKER_COUNT = 100;
+// 지도 중심 기준 고정 반경(m). 이 반경 안의 모든 폐점 매장을 표시하고
+// 동일 반경의 가이드 원을 그려 "표시 영역 = 분석 영역"을 시각적으로 일치시킴.
+// 강남구 평균 밀도 기준 100~150개 수준이며 box-shadow/will-change 최적화로 감당 가능.
+const FIXED_RADIUS_METERS = 300;
 const HEATMAP_LIMIT = 500;
-const CENTER_EPSILON = 1e-4;
+// ~55m. 더 작은 움직임은 마커 재계산 스킵 (드래그 미세 떨림 무시).
+const CENTER_EPSILON = 5e-4;
 
 export default function MapView() {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -37,8 +41,16 @@ export default function MapView() {
   const setCurrentDong = useDashboardStore((state) => state.setCurrentDong);
   const showGoldenPins = useDashboardStore((state) => state.showGoldenPins);
   const topSECByDong = useDashboardStore((state) => state.topSECByDong);
+  const showWorstPins = useDashboardStore((state) => state.showWorstPins);
+  const worstByDong = useDashboardStore((state) => state.worstByDong);
+  const mapTargetCoord = useDashboardStore((state) => state.mapTargetCoord);
+  const setMapTargetCoord = useDashboardStore(
+    (state) => state.setMapTargetCoord,
+  );
   const heatmapRef = useRef<any[]>([]);
   const goldenPinsRef = useRef<any[]>([]);
+  const worstPinsRef = useRef<any[]>([]);
+  const boundaryCircleRef = useRef<any>(null);
   const markerNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const markerStoreMapRef = useRef<Map<string, Store>>(new Map());
   const prevSelectedIdRef = useRef<string | null>(null);
@@ -48,8 +60,10 @@ export default function MapView() {
   const overlayMapRef = useRef<Map<string, any>>(new Map());
   const currentDongRef = useRef<string | null>(null);
   const topSECByDongRef = useRef<Record<string, any>>({});
+  const worstByDongRef = useRef<Record<string, any>>({});
   currentDongRef.current = currentDong;
   topSECByDongRef.current = topSECByDong;
+  worstByDongRef.current = worstByDong;
 
   const filteredStores = useMemo(() => {
     return stores.filter((s) => {
@@ -70,39 +84,61 @@ export default function MapView() {
     return filteredStores.filter((s) => s.dong === currentDong);
   }, [currentDong, filteredStores]);
 
+  // 1차 lat/lng 박스 필터로 후보 축소 → Haversine은 후보에만 적용.
+  // FIXED_RADIUS_METERS를 위/경도 도(°)로 환산해 박스 컷:
+  //   1° lat ≈ 111,000m
+  //   1° lng ≈ 111,000m × cos(lat)  (Seoul ~37.5°에서 ~88,400m)
+  // 박스가 원을 포함하므로 false negative 없음.
   const nearbyDisplayStores = useMemo(() => {
-    const pool = currentDong ? dongFilteredStores : filteredStores;
-    if (pool.length <= NEAREST_MARKER_COUNT) {
-      console.log(
-        `📍 중심(${mapCenter.lat.toFixed(4)}, ${mapCenter.lng.toFixed(4)})에서 가까운 ${pool.length}개`,
-      );
-      return pool;
+    const cLat = mapCenter.lat;
+    const cLng = mapCenter.lng;
+    const latDelta = FIXED_RADIUS_METERS / 111_000;
+    const lngDelta =
+      FIXED_RADIUS_METERS / (111_000 * Math.cos((cLat * Math.PI) / 180));
+    const result: Store[] = [];
+    for (const s of filteredStores) {
+      if (Math.abs(s.lat - cLat) > latDelta) continue;
+      if (Math.abs(s.lng - cLng) > lngDelta) continue;
+      if (getDistance(cLat, cLng, s.lat, s.lng) <= FIXED_RADIUS_METERS) {
+        result.push(s);
+      }
     }
-    const withDistance = pool.map((store) => ({
-      store,
-      distance: getDistance(mapCenter.lat, mapCenter.lng, store.lat, store.lng),
-    }));
-    withDistance.sort((a, b) => a.distance - b.distance);
-    const nearest = withDistance
-      .slice(0, NEAREST_MARKER_COUNT)
-      .map((item) => item.store);
-    console.log(
-      `📍 중심(${mapCenter.lat.toFixed(4)}, ${mapCenter.lng.toFixed(4)})에서 가까운 ${nearest.length}개`,
-    );
-    return nearest;
-  }, [currentDong, dongFilteredStores, filteredStores, mapCenter]);
+    return result;
+  }, [filteredStores, mapCenter]);
 
+  // 히트맵은 pan에 따라 재계산하지 않음 — 동(行政洞) 단위로만 갱신.
+  // pan마다 500개 Circle을 파괴/재생성하던 비용 제거.
   const heatmapStores = useMemo(() => {
-    return currentDong
-      ? dongFilteredStores
-      : filteredStores.slice(0, HEATMAP_LIMIT);
-  }, [currentDong, dongFilteredStores, filteredStores]);
+    if (!showHeatmap) return [];
+    const source = currentDong ? dongFilteredStores : filteredStores;
+    if (source.length <= HEATMAP_LIMIT) return source;
+    return source.slice(0, HEATMAP_LIMIT);
+  }, [showHeatmap, currentDong, dongFilteredStores, filteredStores]);
 
   nearbyStoresRef.current = nearbyDisplayStores;
 
+  // ID 집합이 실제로 바뀐 경우에만 마커 diff 트리거.
+  // 미세한 pan(에피실론 이하)에서는 nearbyDisplayStores 참조만 새로 만들어지고
+  // 내용은 동일한 경우가 잦음 — 불필요한 setState/useEffect 캐스케이드를 방지.
+  const prevDisplayedIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    setMarkerVersion((v) => v + 1);
-  }, [filteredStores, currentDong, mapCenter]);
+    const prev = prevDisplayedIdsRef.current;
+    let changed = nearbyDisplayStores.length !== prev.size;
+    if (!changed) {
+      for (const s of nearbyDisplayStores) {
+        if (!prev.has(s.id)) {
+          changed = true;
+          break;
+        }
+      }
+    }
+    if (changed) {
+      prevDisplayedIdsRef.current = new Set(
+        nearbyDisplayStores.map((s) => s.id),
+      );
+      setMarkerVersion((v) => v + 1);
+    }
+  }, [nearbyDisplayStores]);
 
   const dongCount = dongFilteredStores.length;
 
@@ -210,17 +246,14 @@ export default function MapView() {
       const node = document.createElement("div");
       node.innerHTML = createMarkerHTML(store.category, isSelected);
 
-      const design = getMarkerDesign(store.category);
-      const baseFilter = `drop-shadow(0 4px 8px ${design.shadowColor})`;
-      const hoverFilter = `drop-shadow(0 6px 12px ${design.shadowColor})`;
-
+      // hover 시 transform만 변경 (filter 변경은 GPU 부담이 큼).
+      // box-shadow는 marker-design.ts에서 직접 입혀져 있으므로 hover에서 건드리지 않음.
       node.addEventListener("mouseenter", () => {
         const inner = node.querySelector(
           ".pinterest-marker",
         ) as HTMLElement | null;
         if (!inner) return;
         inner.style.transform = "scale(1.15) translateY(-3px)";
-        inner.style.filter = hoverFilter;
       });
       node.addEventListener("mouseleave", () => {
         const inner = node.querySelector(
@@ -228,14 +261,12 @@ export default function MapView() {
         ) as HTMLElement | null;
         if (!inner) return;
         inner.style.transform = "scale(1) translateY(0)";
-        inner.style.filter = baseFilter;
       });
       node.addEventListener("click", () => {
         setSelectedStore(store);
         setClusterStores(null);
         setSelectedSEC(null);
-        map.setCenter(position);
-        if (map.getLevel() > 3) map.setLevel(3);
+        setMapTargetCoord({ lat: store.lat, lng: store.lng, zoom: 3 });
       });
 
       markerNodesRef.current.set(store.id, node);
@@ -245,6 +276,7 @@ export default function MapView() {
         position,
         content: node,
         yAnchor: 1,
+        zIndex: 1,
       });
       overlay.setMap(map);
       overlayMapRef.current.set(store.id, overlay);
@@ -270,8 +302,41 @@ export default function MapView() {
       overlayMapRef.current.clear();
       markerNodesRef.current.clear();
       markerStoreMapRef.current.clear();
+      if (boundaryCircleRef.current) {
+        boundaryCircleRef.current.setMap(null);
+        boundaryCircleRef.current = null;
+      }
     };
   }, []);
+
+  // 고정 반경 바운더리 원 (= FIXED_RADIUS_METERS).
+  // 위치만 갱신하고 반지름은 불변. setPosition으로 재활용해 GC 비용 최소화.
+  useEffect(() => {
+    if (!mapInstanceRef.current || isLoading) return;
+    if (typeof window === "undefined" || !window.kakao || !window.kakao.maps) {
+      return;
+    }
+
+    const center = new window.kakao.maps.LatLng(mapCenter.lat, mapCenter.lng);
+
+    if (boundaryCircleRef.current) {
+      boundaryCircleRef.current.setPosition(center);
+      return;
+    }
+
+    const circle = new window.kakao.maps.Circle({
+      center,
+      radius: FIXED_RADIUS_METERS,
+      strokeWeight: 2,
+      strokeColor: "#3B82F6",
+      strokeOpacity: 0.7,
+      strokeStyle: "dashed",
+      fillColor: "#3B82F6",
+      fillOpacity: 0.1,
+    });
+    circle.setMap(mapInstanceRef.current);
+    boundaryCircleRef.current = circle;
+  }, [mapCenter, isLoading]);
 
   useEffect(() => {
     const newId = selectedStore?.id ?? null;
@@ -423,17 +488,14 @@ export default function MapView() {
         setSelectedSEC(sec);
         setSelectedStore(null);
         setClusterStores(null);
-
-        const map = mapInstanceRef.current;
-        if (!map) return;
-        map.setCenter(new window.kakao.maps.LatLng(sec.lat, sec.lng));
-        if (map.getLevel() > 3) map.setLevel(3);
+        setMapTargetCoord({ lat: sec.lat, lng: sec.lng, zoom: 3 });
       };
 
       const overlay = new window.kakao.maps.CustomOverlay({
         position: new window.kakao.maps.LatLng(sec.lat, sec.lng),
         content,
         yAnchor: 1,
+        zIndex: 100,
       });
       overlay.setMap(mapInstanceRef.current);
       newPins.push(overlay);
@@ -474,6 +536,120 @@ export default function MapView() {
 
     console.log(`✅ 자동 줌 완료 (레벨 ${mapInstanceRef.current.getLevel()})`);
   }, [showGoldenPins, isLoading]);
+
+  useEffect(() => {
+    worstPinsRef.current.forEach((overlay) => overlay.setMap(null));
+    worstPinsRef.current = [];
+
+    if (
+      !mapInstanceRef.current ||
+      !showWorstPins ||
+      !currentDong ||
+      isLoading
+    ) {
+      return;
+    }
+    if (typeof window === "undefined" || !window.kakao || !window.kakao.maps) {
+      return;
+    }
+
+    const currentWorst = worstByDong[currentDong] || [];
+    if (currentWorst.length === 0) {
+      console.log("⚠️ 최악 핀 없음:", currentDong);
+      return;
+    }
+
+    console.log("⚠️ 최악 핀 생성 시작...");
+
+    const newPins: any[] = [];
+    currentWorst.forEach((sec, index) => {
+      const content = document.createElement("div");
+      content.style.cssText =
+        "position:relative;width:40px;height:50px;cursor:pointer;transition:transform 0.2s;";
+      content.innerHTML = `
+        <div style="position:absolute;width:40px;height:40px;background:linear-gradient(135deg,#7F1D1D 0%,#DC2626 100%);border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 4px 8px rgba(0,0,0,0.4);"></div>
+        <div style="position:absolute;top:8px;left:50%;transform:translateX(-50%);color:white;font-weight:bold;font-size:18px;text-shadow:0 1px 2px rgba(0,0,0,0.6);z-index:10;">${index + 1}</div>
+      `;
+
+      content.onmouseenter = () => {
+        content.style.transform = "scale(1.1)";
+      };
+      content.onmouseleave = () => {
+        content.style.transform = "scale(1.0)";
+      };
+      content.onclick = () => {
+        console.log(`⚠️ 최악 ${index + 1}위 클릭:`, sec.storeName);
+        setSelectedSEC(sec);
+        setSelectedStore(null);
+        setClusterStores(null);
+        setMapTargetCoord({ lat: sec.lat, lng: sec.lng, zoom: 3 });
+      };
+
+      const overlay = new window.kakao.maps.CustomOverlay({
+        position: new window.kakao.maps.LatLng(sec.lat, sec.lng),
+        content,
+        yAnchor: 1,
+        zIndex: 100,
+      });
+      overlay.setMap(mapInstanceRef.current);
+      newPins.push(overlay);
+    });
+
+    worstPinsRef.current = newPins;
+    console.log(`✅ 최악 핀 ${newPins.length}개 생성 완료`);
+  }, [
+    showWorstPins,
+    currentDong,
+    worstByDong,
+    isLoading,
+    setSelectedSEC,
+    setSelectedStore,
+    setClusterStores,
+  ]);
+
+  useEffect(() => {
+    if (!showWorstPins || !mapInstanceRef.current || isLoading) return;
+    if (typeof window === "undefined" || !window.kakao || !window.kakao.maps) {
+      return;
+    }
+
+    const dong = currentDongRef.current;
+    if (!dong) return;
+    const currentWorst = worstByDongRef.current[dong] || [];
+    if (currentWorst.length === 0) return;
+
+    console.log("🔍 최악 TOP3 영역으로 자동 줌 (꽉차게)...");
+
+    const bounds = new window.kakao.maps.LatLngBounds();
+    currentWorst.forEach((sec: any) => {
+      bounds.extend(new window.kakao.maps.LatLng(sec.lat, sec.lng));
+    });
+
+    mapInstanceRef.current.setBounds(bounds, 60, 60, 60, 60);
+    lastZoomRef.current = mapInstanceRef.current.getLevel();
+
+    console.log(`✅ 자동 줌 완료 (레벨 ${mapInstanceRef.current.getLevel()})`);
+  }, [showWorstPins, isLoading]);
+
+  useEffect(() => {
+    if (!mapTargetCoord || !mapInstanceRef.current || isLoading) return;
+    if (typeof window === "undefined" || !window.kakao || !window.kakao.maps) {
+      return;
+    }
+
+    const map = mapInstanceRef.current;
+    const { lat, lng, zoom } = mapTargetCoord;
+    console.log(
+      `🎯 지도 이동: (${lat.toFixed(5)}, ${lng.toFixed(5)})${zoom !== undefined ? `, 레벨 ${zoom}` : ""}`,
+    );
+    if (typeof map.relayout === "function") map.relayout();
+    map.setCenter(new window.kakao.maps.LatLng(lat, lng));
+    if (zoom !== undefined && map.getLevel() > zoom) {
+      map.setLevel(zoom);
+      lastZoomRef.current = zoom;
+    }
+    setMapTargetCoord(null);
+  }, [mapTargetCoord, isLoading, setMapTargetCoord]);
 
   if (error) {
     return (
