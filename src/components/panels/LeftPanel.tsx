@@ -295,7 +295,7 @@ function VirtualStoreHeader({
   onChangeBusiness,
   onClose,
 }: VirtualHeaderProps) {
-  const grade = sec ? secGrade(sec.totalScore) : null;
+  const grade = quadrant ? quadrantConclusion(quadrant.quadrant) : null;
   // 발표 멘트("역삼동", "신사 가로수길" 등)와 헤더 일관성 위해 행정동 표시.
   // detectDong은 bounds 기반 — 가장자리에서 null일 수 있어 fallback 좌표 유지.
   const dongInfo = detectDong(store.lat, store.lng);
@@ -409,15 +409,25 @@ interface HeaderProps {
   onClose: () => void;
 }
 
-// SEC 점수의 *재출점 적정도* 해석. 헤더 라벨 + 우패널 TOP3와 메시지 일관성.
-function secGrade(score: number): { label: string; color: string } {
-  if (score < 50) return { label: "재출점 비추천", color: "#DC2626" };
-  if (score < 70) return { label: "조건부 검토", color: "#D97706" };
-  return { label: "재출점 가능", color: "#059669" };
+// 4사분면 기반 결론 라벨 — 헤더 배지 / 산점도 / AI 진단이 모두 동일 분류를 따르도록
+// SEC 점수 기반 등급 대신 quadrant를 직접 매핑. 청중이 보는 분류 = 결론.
+function quadrantConclusion(q: Quadrant): { label: string; color: string } {
+  switch (q) {
+    case "paradox":
+    case "danger":
+      return { label: "재출점 비추천", color: "#DC2626" };
+    case "golden":
+      return { label: "우량 재출점 후보", color: "#059669" };
+    case "quiet":
+      return { label: "신중 검토", color: "#D97706" };
+    case "neutral":
+      return { label: "조건부 검토", color: "#D97706" };
+    default:
+      return { label: "데이터 부족", color: "#94A3B8" };
+  }
 }
 
 // 4사분면 부속 라벨 — 함정 자리 = 위험, 황금 = 우량 등 *직관적 의미*.
-// 청중이 "함정"의 부정성/"황금"의 긍정성을 즉시 인지하게.
 function quadrantSubtext(q: Quadrant): string | null {
   switch (q) {
     case "paradox":
@@ -433,7 +443,7 @@ function quadrantSubtext(q: Quadrant): string | null {
 }
 
 function SelectedStoreHeader({ store, quadrant, sec, onClose }: HeaderProps) {
-  const grade = sec ? secGrade(sec.totalScore) : null;
+  const grade = quadrant ? quadrantConclusion(quadrant.quadrant) : null;
 
   return (
     <div className="p-5 border-b border-slate-200 bg-white">

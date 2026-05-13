@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useDashboardStore } from "@/store/useDashboardStore";
 import {
-  analyzeLUD,
   analyzeSEG,
   analyzeTrend,
   type SECScore,
@@ -32,10 +31,18 @@ interface MetricCell {
   score: number | null;
   clickable: boolean;
   hint?: string; // 하단 4개 hover tooltip — 지표 의미.
+  // true: 점수 높음 = 나쁨 (위험도 지표). default false (높음=좋음).
+  reversed?: boolean;
 }
 
-const SCORE_TONE = (s: number | null) => {
+// 점수→색상. reversed=true는 위험도 지표(LUD)용 — 높음=빨강.
+const SCORE_TONE = (s: number | null, reversed = false) => {
   if (s === null) return "text-slate-300";
+  if (reversed) {
+    if (s >= 70) return "text-red-500";
+    if (s >= 40) return "text-amber-600";
+    return "text-emerald-600";
+  }
   if (s >= 70) return "text-emerald-600";
   if (s >= 40) return "text-amber-600";
   return "text-red-500";
@@ -53,7 +60,6 @@ export default function MetricGrid({
   const [hintCell, setHintCell] = useState<MetricKey | null>(null);
 
   const cells: MetricCell[] = useMemo(() => {
-    const lud = analyzeLUD(store, allStores, 250);
     const seg = analyzeSEG(store, allStores, 250);
     const trend = analyzeTrend(store, allStores, 250);
 
@@ -77,7 +83,14 @@ export default function MetricGrid({
     else footScore = 50;
 
     return [
-      { key: "lud", label: "입지", score: lud.score, clickable: true },
+      {
+        key: "lud",
+        label: "입지",
+        // SEC ludScore 사용 — 안전도 방향(높음=좋음). analyzeLUD.score는 위험도 방향이라
+        // 헤더 SEC + 다른 7개 지표와 직교. 펼침 LUDCard도 같은 안전도 점수로 통일.
+        score: sec?.ludScore ?? null,
+        clickable: true,
+      },
       { key: "seg", label: "상권", score: segScore, clickable: true },
       { key: "trend", label: "추세", score: trendScore, clickable: true },
       { key: "foot", label: "유동", score: footScore, clickable: true },
@@ -169,7 +182,9 @@ export default function MetricGrid({
                 }`}
                 aria-label={`${cell.label} 지표${cell.clickable ? " · 클릭으로 상세 펼치기" : " · 클릭으로 설명 보기"}`}
               >
-                <div className={`text-base font-bold ${SCORE_TONE(cell.score)}`}>
+                <div
+                  className={`text-base font-bold ${SCORE_TONE(cell.score, cell.reversed)}`}
+                >
                   {cell.score !== null ? cell.score : "—"}
                 </div>
                 <div className="text-[10px] text-slate-600 mt-0.5">

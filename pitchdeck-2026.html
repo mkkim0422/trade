@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>신규출점 2차 검증 도구 — 피치덱</title>
+<style>
+  :root {
+    --bg: #0F172A;
+    --bg-2: #1E293B;
+    --fg: #F1F5F9;
+    --muted: #94A3B8;
+    --accent: #A855F7;
+    --accent-2: #3B82F6;
+    --warn: #EF4444;
+    --good: #F59E0B;
+    --quiet: #64748B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif; }
+  body { scroll-snap-type: y mandatory; overflow-y: scroll; height: 100vh; }
+  section.slide {
+    min-height: 100vh;
+    scroll-snap-align: start;
+    padding: 6vh 8vw;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-bottom: 1px solid #1E293B;
+    position: relative;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  h1 { font-size: clamp(40px, 7vw, 84px); font-weight: 800; line-height: 1.05; letter-spacing: -0.03em; }
+  h2 { font-size: clamp(28px, 4.5vw, 52px); font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 24px; }
+  h3 { font-size: clamp(18px, 2vw, 24px); font-weight: 700; color: var(--fg); margin-bottom: 8px; }
+  p.lead { font-size: clamp(18px, 2vw, 26px); color: var(--muted); font-weight: 300; line-height: 1.55; max-width: 950px; }
+  p { font-size: clamp(14px, 1.4vw, 17px); color: var(--muted); line-height: 1.6; }
+  strong { color: var(--fg); font-weight: 700; }
+  .accent { color: var(--accent); }
+  .blue { color: var(--accent-2); }
+  .warn { color: var(--warn); }
+  .good { color: var(--good); }
+  .grid {
+    display: grid;
+    gap: 24px;
+    margin-top: 32px;
+  }
+  .grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .card {
+    background: var(--bg-2);
+    border-radius: 14px;
+    padding: 22px 24px;
+    border: 1px solid #334155;
+  }
+  .card .num { font-size: clamp(28px, 4vw, 44px); font-weight: 800; line-height: 1.1; margin-bottom: 4px; letter-spacing: -0.02em; }
+  .card .label { font-size: 13px; color: var(--muted); }
+  .pill {
+    display: inline-block;
+    padding: 5px 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 6px;
+    margin-bottom: 6px;
+  }
+  .pill.purple { background: rgba(168, 85, 247, 0.15); color: #C4B5FD; border: 1px solid #7C3AED; }
+  .pill.blue { background: rgba(59, 130, 246, 0.15); color: #93C5FD; border: 1px solid #2563EB; }
+  .pill.muted { background: #1E293B; color: var(--muted); border: 1px solid #334155; }
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 80px 1fr;
+    align-items: center;
+    gap: 24px;
+    margin-top: 28px;
+  }
+  .compare .vs {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.18em;
+  }
+  .compare .side {
+    background: var(--bg-2);
+    border-radius: 14px;
+    padding: 24px;
+    border: 1px solid #334155;
+    min-height: 220px;
+  }
+  .compare .side h4 { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; }
+  .compare .side ul { list-style: none; padding-left: 0; }
+  .compare .side li { padding: 5px 0; font-size: 15px; color: var(--fg); }
+  .compare .side li::before { content: "·"; margin-right: 8px; color: var(--muted); }
+  .nav {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .nav a {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #334155;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .nav a:hover, .nav a.active { background: var(--accent); transform: scale(1.4); }
+  .hint {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--muted);
+    opacity: 0.55;
+    letter-spacing: 0.08em;
+    z-index: 100;
+  }
+  .slide-num {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+  }
+  .glow { text-shadow: 0 0 30px rgba(168, 85, 247, 0.35); }
+  .quote {
+    border-left: 3px solid var(--accent);
+    padding-left: 20px;
+    font-size: clamp(18px, 2vw, 24px);
+    color: var(--fg);
+    font-weight: 500;
+    margin-top: 24px;
+    max-width: 850px;
+  }
+  table.stat {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 28px;
+  }
+  table.stat th, table.stat td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #1E293B;
+    font-size: 15px;
+  }
+  table.stat th { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; }
+  table.stat td.num { font-family: ui-monospace, monospace; font-weight: 700; }
+  .timeline {
+    margin-top: 32px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    position: relative;
+  }
+  .timeline .step {
+    background: var(--bg-2);
+    border-radius: 12px;
+    padding: 18px;
+    border: 1px solid #334155;
+  }
+  .timeline .step.done { border-color: var(--accent); }
+  .timeline .step.now { border-color: var(--good); background: linear-gradient(135deg, rgba(245,158,11,0.1), transparent); }
+  .timeline .step .when { font-size: 11px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+  .timeline .step .what { font-size: 15px; font-weight: 700; margin-top: 6px; color: var(--fg); }
+  .timeline .step .desc { font-size: 12px; color: var(--muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<nav class="nav" id="nav"></nav>
+<div class="hint">↓ 스크롤 · 화살표키로 이동</div>
+
+<!-- 1. Cover -->
+<section class="slide" id="s1">
+  <span class="slide-num">01 / 09</span>
+  <div class="badge">PITCH · 2026.05</div>
+  <h1 class="glow">신규출점 <span class="accent">2차 검증</span> 도구</h1>
+  <p class="lead" style="margin-top: 32px;">
+    1차 상권분석으로 안 보이는 <strong>폐업 위험</strong>을 데이터로 진단.<br />
+    점포개발팀의 마지막 의사결정을 안전하게 만듭니다.
+  </p>
+  <div style="margin-top: 48px;">
+    <span class="pill purple">강남구 MVP</span>
+    <span class="pill blue">B2B SaaS</span>
+    <span class="pill muted">데모: trade-eta-two.vercel.app</span>
+  </div>
+</section>
+
+<!-- 2. 문제 — 1차 도구의 사각지대 -->
+<section class="slide" id="s2">
+  <span class="slide-num">02 / 09</span>
+  <div class="badge">문제</div>
+  <h2>1차 상권분석의 <span class="warn">사각지대</span></h2>
+  <p class="lead">
+    매출 추정, 동선, 경쟁점 분석은 다 있지만,<br />
+    <strong>"이 자리, 망할 수도 있다"</strong>를 알려주는 도구는 없습니다.
+  </p>
+  <div class="compare">
+    <div class="side">
+      <h4>현행 1차 도구</h4>
+      <ul>
+        <li>매출 추정 (POS/카드 데이터)</li>
+        <li>유동인구 통계</li>
+        <li>경쟁점 거리/수</li>
+        <li>지가 / 임대 시세</li>
+        <li>업종 적합도</li>
+      </ul>
+    </div>
+    <div class="vs">VS</div>
+    <div class="side" style="border-color: var(--accent);">
+      <h4 style="color: var(--accent);">빠진 차원: 폐업 데이터</h4>
+      <ul>
+        <li><strong>같은 자리</strong>에서 몇 번 망했나</li>
+        <li><strong>주변 250m</strong> 폐업 누적</li>
+        <li>유동·폐업 결합, 함정 자리</li>
+        <li>폐업 후 공실 기간 (재출점 적정도)</li>
+        <li>동종 업종 장기 생존율</li>
+      </ul>
+    </div>
+  </div>
+  <div class="quote">
+    "사람이 많이 다니는 자리 = 좋은 자리"라는 1차 가정은,<br />
+    강남구 실데이터에서 <span class="warn">2.6배 더 망하는 자리</span>로 나옵니다.
+  </div>
+</section>
+
+<!-- 3. 솔루션 — SEC 8지표 -->
+<section class="slide" id="s3">
+  <span class="slide-num">03 / 09</span>
+  <div class="badge">솔루션</div>
+  <h2><span class="accent">SEC</span> 8지표 · Strategic Entry Coverage</h2>
+  <p class="lead">
+    매장 좌표 하나로 8가지 지표를 동시 분석. 가중합 0~100점 단일 점수.
+  </p>
+  <div class="grid cols-4" style="margin-top: 40px;">
+    <div class="card">
+      <div class="num accent">25%</div>
+      <div class="label">입지 (LUD)<br/>반경 250m 폐업 수</div>
+    </div>
+    <div class="card">
+      <div class="num accent">20%</div>
+      <div class="label">유동 (Foot)<br/>SKT 격자 일평균</div>
+    </div>
+    <div class="card">
+      <div class="num accent">15%</div>
+      <div class="label">상권 (SEG)<br/>주변 평균 영업기간</div>
+    </div>
+    <div class="card">
+      <div class="num accent">12%</div>
+      <div class="label">추세 (Trend)<br/>최근 3개월 가속도</div>
+    </div>
+    <div class="card">
+      <div class="num">12%</div>
+      <div class="label">업종 적합도<br/>동종 5년+ 생존율</div>
+    </div>
+    <div class="card">
+      <div class="num">8%</div>
+      <div class="label">공실 기간<br/>좌표 100m 최근 폐업</div>
+    </div>
+    <div class="card">
+      <div class="num">5%</div>
+      <div class="label">장수 매장<br/>주변 5년+ 비율</div>
+    </div>
+    <div class="card">
+      <div class="num">3%</div>
+      <div class="label">면적 적합도<br/>30~100㎡ 최적</div>
+    </div>
+  </div>
+  <p style="margin-top: 32px; font-size: 14px;">
+    + <strong class="blue">4사분면 자리 분류</strong> (함정·황금·위험·고요) — 직관적 라벨로 보조.
+  </p>
+</section>
+
+<!-- 4. 데이터 / 기술 -->
+<section class="slide" id="s4">
+  <span class="slide-num">04 / 09</span>
+  <div class="badge">데이터 · 기술</div>
+  <h2>세 가지 데이터셋 · <span class="blue">사전계산으로 즉시 응답</span></h2>
+  <div class="grid cols-3" style="margin-top: 32px;">
+    <div class="card">
+      <h3>📍 LOCALDATA</h3>
+      <p style="margin-top: 10px;">행정안전부 공공데이터.<br/>강남구 일반음식점 <strong>34,797개</strong> 폐업 이력 (최근 3년 활용 3,940개).</p>
+    </div>
+    <div class="card">
+      <h3>👥 SKT 유동인구</h3>
+      <p style="margin-top: 10px;">50m × 50m 격자 <strong>15,241개</strong>.<br/>일평균/주중/주말 단위.</p>
+    </div>
+    <div class="card">
+      <h3>🗺️ 카카오 Geocoding</h3>
+      <p style="margin-top: 10px;">주소 → 좌표 변환.<br/>1차 분석 결과 주소 입력만으로 즉시 검증 진입.</p>
+    </div>
+  </div>
+  <h3 style="margin-top: 48px;">처리 아키텍처</h3>
+  <div class="grid cols-4" style="margin-top: 16px;">
+    <div class="card">
+      <div class="num blue">precompute</div>
+      <div class="label">15,241 격자 × 3,940 매장 사전계산 (빌드 1회, ~3초)</div>
+    </div>
+    <div class="card">
+      <div class="num blue">런타임</div>
+      <div class="label">매장/주소 입력 → SEC 계산 약 50ms</div>
+    </div>
+    <div class="card">
+      <div class="num blue">캐싱</div>
+      <div class="label">Zustand 메모리 + JSON 사전계산 (SEC 0.3초)</div>
+    </div>
+    <div class="card">
+      <div class="num blue">Next.js 15</div>
+      <div class="label">App Router · TypeScript · Tailwind · Vercel</div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 검증 — 함정 자리 가설 -->
+<section class="slide" id="s5">
+  <span class="slide-num">05 / 09</span>
+  <div class="badge">검증</div>
+  <h2>가설: <span class="accent">함정 자리는 전염성을 가진다</span></h2>
+  <p class="lead">
+    같은 100m 안에서 한 매장이 망하면, 다음 폐업까지의 평균 시간을 측정.
+  </p>
+  <table class="stat">
+    <thead>
+      <tr><th>사분면</th><th>매장 수</th><th>평균 폐업 간격</th><th>6개월 내 폐업</th><th>해석</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="accent">🟣 함정 자리</span></td><td class="num">814</td><td class="num accent">0.9개월</td><td class="num">98%</td><td>유동·폐업 동시 상위, 가장 짧은 간격</td></tr>
+      <tr><td><span class="warn">⚠️ 위험</span></td><td class="num">1,014</td><td class="num">1.2개월</td><td class="num">97%</td><td>저유동 + 폐업 다수</td></tr>
+      <tr><td><span class="good">🏆 황금</span></td><td class="num">1,160</td><td class="num">1.7개월</td><td class="num">94%</td><td>고유동 + 폐업 적음</td></tr>
+      <tr><td style="color: var(--quiet);">🌙 고요</td><td class="num">1,523</td><td class="num">2.0개월</td><td class="num">92%</td><td>저유동·저폐업, 가장 긴 간격</td></tr>
+    </tbody>
+  </table>
+  <div class="quote">
+    함정 자리는 고요 구간보다 <span class="accent">2.2배</span> 빨리 다음 폐업이 발생.<br />
+    함정 자리에 새 매장을 내는 건 <strong class="warn">통계적으로 위험</strong>합니다.
+  </div>
+</section>
+
+<!-- 6. 실제 사례 — 케이스 스터디 -->
+<section class="slide" id="s6">
+  <span class="slide-num">06 / 09</span>
+  <div class="badge">실제 사례</div>
+  <h2>강남구 함정 자리 <span class="accent">5곳</span> · 연쇄 폐업 케이스</h2>
+  <p class="lead">동 분포, 좁은 좌표 안 매장이 몇 개월 안에 얼마나 망했는지.</p>
+  <div class="grid cols-3" style="margin-top: 36px;">
+    <div class="card">
+      <div class="num accent">33개</div>
+      <div class="label"><strong>역삼동</strong> · 100m 반경 / 11.7개월</div>
+    </div>
+    <div class="card">
+      <div class="num accent">11개</div>
+      <div class="label"><strong>논현동</strong> · 100m 반경 / 10.8개월</div>
+    </div>
+    <div class="card">
+      <div class="num accent">11개</div>
+      <div class="label"><strong>신사동</strong> · 100m 반경 / 11.7개월 (가로수길)</div>
+    </div>
+    <div class="card">
+      <div class="num">7개</div>
+      <div class="label"><strong>삼성동</strong> · 100m 반경 / 4.9개월 — 가장 빠른 연쇄</div>
+    </div>
+    <div class="card">
+      <div class="num">4개</div>
+      <div class="label"><strong>대치동</strong> · 100m 반경 / 10.1개월</div>
+    </div>
+    <div class="card" style="background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(168,85,247,0.05)); border-color: var(--accent);">
+      <div class="num accent">실측</div>
+      <div class="label">짧은 케이스 <strong>7일</strong> 간격 폐업도 다수 발견 — 임대 협상 전 검증 필수.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. 비즈니스 — 타겟 / 가치 -->
+<section class="slide" id="s7">
+  <span class="slide-num">07 / 09</span>
+  <div class="badge">비즈니스</div>
+  <h2>타겟: <span class="blue">대형 프랜차이즈 점포개발팀</span></h2>
+  <div class="compare" style="margin-top: 32px;">
+    <div class="side">
+      <h4>현재 워크플로우</h4>
+      <ul>
+        <li>1차 상권분석 외주 (수백만~수천만원)</li>
+        <li>후보 자리 3~5곳 추천</li>
+        <li>현장 답사 · 임대 협상</li>
+        <li><strong style="color: var(--warn);">출점 → 6개월 내 위험 매장 발견</strong></li>
+        <li>매몰비용 (인테리어 + 임대료 + 기회비용)</li>
+      </ul>
+    </div>
+    <div class="vs">+</div>
+    <div class="side" style="border-color: var(--accent-2);">
+      <h4 style="color: var(--accent-2);">우리 도구 추가 시</h4>
+      <ul>
+        <li>1차 결과 주소 입력 → <strong>SEC 점수 즉시</strong></li>
+        <li>함정/위험 자리 자동 경고</li>
+        <li>가상 매장 시뮬레이션 (업종/면적 변경)</li>
+        <li>임대 협상 전 <strong>리스크 정량화</strong></li>
+        <li>매몰비용 <strong style="color: var(--accent);">사전 회피</strong></li>
+      </ul>
+    </div>
+  </div>
+  <h3 style="margin-top: 40px;">가격 모델 (검토 중)</h3>
+  <div class="grid cols-3">
+    <div class="card"><div class="num blue">자리당</div><div class="label">5~10만원 / 1회 검증 · 일회성 점포개발</div></div>
+    <div class="card"><div class="num blue">월 구독</div><div class="label">50~100만원 / 본사 팀 · 무제한 검증 + 보고서</div></div>
+    <div class="card"><div class="num blue">엔터프라이즈</div><div class="label">데이터 API 연동 · 자체 시스템에 SEC 임베드</div></div>
+  </div>
+</section>
+
+<!-- 8. 로드맵 -->
+<section class="slide" id="s8">
+  <span class="slide-num">08 / 09</span>
+  <div class="badge">로드맵</div>
+  <h2>지금까지 · <span class="good">앞으로</span></h2>
+  <div class="timeline">
+    <div class="step done">
+      <div class="when">DONE · 2026.04</div>
+      <div class="what">강남구 MVP</div>
+      <div class="desc">일반음식점 3,940개 · SEC 8지표 · 4사분면 · 검증 모달</div>
+    </div>
+    <div class="step now">
+      <div class="when">NOW · 2026.Q2</div>
+      <div class="what">발표 · 파일럿</div>
+      <div class="desc">초기 고객 3~5사 시연 · 가격 모델 확정</div>
+    </div>
+    <div class="step">
+      <div class="when">Q3</div>
+      <div class="what">편의점 데이터</div>
+      <div class="desc">CU/GS25/세븐일레븐 · 다른 업종 SEC calibration</div>
+    </div>
+    <div class="step">
+      <div class="when">Q4</div>
+      <div class="what">서울 25구</div>
+      <div class="desc">LOCALDATA 전체 · SKT 격자 확장 · 검색 SaaS</div>
+    </div>
+    <div class="step">
+      <div class="when">2027+</div>
+      <div class="what">실매출 통합</div>
+      <div class="desc">카드사 매출 · BC카드 결제 데이터 · 예측 정확도 ↑</div>
+    </div>
+  </div>
+  <h3 style="margin-top: 48px;">Phase 5 — PDF 보고서</h3>
+  <p>매장 1곳 분석 시 자동 PDF 발행 (점포개발팀이 결재 라인 올릴 때 첨부). 사내 의사결정 도구로 자리 잡음.</p>
+</section>
+
+<!-- 9. Close -->
+<section class="slide" id="s9">
+  <span class="slide-num">09 / 09</span>
+  <div class="badge">CLOSE</div>
+  <h1>"여기 망할 수도 있다"<br/><span class="accent">데이터로 진단하는 유일한 도구.</span></h1>
+  <p class="lead" style="margin-top: 32px;">
+    1차 상권분석은 <strong>가능성</strong>을 봅니다.<br/>
+    저희는 <strong>위험</strong>을 봅니다.<br/>
+    출점 결정 마지막 단계, 함정 자리 필터로 추가하세요.
+  </p>
+  <div style="margin-top: 56px; display: flex; gap: 32px; flex-wrap: wrap;">
+    <div>
+      <div class="badge">데모</div>
+      <div style="font-size: 22px; font-weight: 700;">trade-eta-two.vercel.app</div>
+    </div>
+    <div>
+      <div class="badge">연락</div>
+      <div style="font-size: 22px; font-weight: 700;">help@sphinfo.co.kr</div>
+    </div>
+    <div>
+      <div class="badge">자료</div>
+      <div style="font-size: 22px; font-weight: 700;">사전계산 데이터 / API 협의</div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // 네비 도트 생성
+  const total = 9;
+  const nav = document.getElementById("nav");
+  for (let i = 1; i <= total; i++) {
+    const a = document.createElement("a");
+    a.href = "#s" + i;
+    a.dataset.idx = i;
+    a.title = "Slide " + i;
+    nav.appendChild(a);
+  }
+
+  // 현재 슬라이드 추적 (IntersectionObserver)
+  const dots = nav.querySelectorAll("a");
+  const sections = document.querySelectorAll("section.slide");
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          const idx = Array.from(sections).indexOf(e.target);
+          dots.forEach((d, i) => d.classList.toggle("active", i === idx));
+        }
+      });
+    },
+    { threshold: 0.55 },
+  );
+  sections.forEach((s) => io.observe(s));
+
+  // 화살표 키 네비
+  let current = 0;
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowRight" || e.key === " ") {
+      e.preventDefault();
+      current = Math.min(total - 1, current + 1);
+      sections[current].scrollIntoView({ behavior: "smooth" });
+    } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      current = Math.max(0, current - 1);
+      sections[current].scrollIntoView({ behavior: "smooth" });
+    }
+  });
+
+  // 스크롤로 current 동기화
+  let scrollTimer;
+  window.addEventListener("scroll", () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      let best = 0, bestVis = 0;
+      sections.forEach((s, i) => {
+        const r = s.getBoundingClientRect();
+        const visible = Math.max(0, Math.min(window.innerHeight, r.bottom) - Math.max(0, r.top));
+        if (visible > bestVis) { bestVis = visible; best = i; }
+      });
+      current = best;
+    }, 80);
+  });
+</script>
+</body>
+</html>

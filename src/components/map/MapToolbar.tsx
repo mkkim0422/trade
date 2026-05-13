@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { Store } from "@/types";
 import { useDashboardStore } from "@/store/useDashboardStore";
-import { loadGridAggregates } from "@/lib/grid-aggregates";
 
 interface MapToolbarProps {
   allStores: Store[];
@@ -21,15 +20,6 @@ export default function MapToolbar({
   const dateFilter = useDashboardStore((state) => state.dateFilter);
   const showHeatmap = useDashboardStore((state) => state.showHeatmap);
   const setShowHeatmap = useDashboardStore((state) => state.setShowHeatmap);
-  const showParadoxLayer = useDashboardStore((s) => s.showParadoxLayer);
-  const setShowParadoxLayer = useDashboardStore((s) => s.setShowParadoxLayer);
-
-  const [paradoxCount, setParadoxCount] = useState(0);
-  useEffect(() => {
-    loadGridAggregates()
-      .then((d) => setParadoxCount(d.paradoxGridCount))
-      .catch(() => {});
-  }, []);
 
   const dongStores = useMemo(() => {
     return currentDong
@@ -163,50 +153,6 @@ export default function MapToolbar({
             </div>
           </div>
         )}
-
-        {/* P2: 함정 자리 토글 — 발표 클라이맥스 카드. 최상단 배치. */}
-        <div className="bg-gradient-to-br from-purple-100 to-fuchsia-100 dark:from-purple-900/40 dark:to-fuchsia-900/40 rounded-lg border-2 border-purple-400 dark:border-purple-600 p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
-              🟣 함정 자리 보기
-            </h3>
-            <button
-              onClick={() => setShowParadoxLayer(!showParadoxLayer)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                showParadoxLayer ? "bg-purple-600" : "bg-slate-300"
-              }`}
-              aria-label="함정 자리 토글"
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  showParadoxLayer ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-
-          {showParadoxLayer ? (
-            <div className="mt-2">
-              <div className="text-2xl font-bold text-purple-700 dark:text-purple-300 tracking-tight">
-                🟣 강남구의 진짜 함정 {paradoxCount}곳
-              </div>
-              <div className="text-[11px] text-purple-700 dark:text-purple-300 mt-1.5 leading-snug">
-                유동·폐업 둘 다 강남구 상위인 격자.
-                <br />
-                일반 상권분석으로는 찾을 수 없습니다.
-              </div>
-              <div className="text-[10px] text-purple-500 dark:text-purple-400 mt-1.5">
-                지도의 보라색 격자 클릭 → 그 자리 폐업 매장 보기
-              </div>
-            </div>
-          ) : (
-            <div className="text-[11px] text-purple-700/80 dark:text-purple-300/80 leading-snug">
-              유동·폐업 둘 다 강남구 상위인 격자 {paradoxCount}곳.
-              <br />
-              강남구의 진짜 함정. 토글 ON으로 지도에 표시.
-            </div>
-          )}
-        </div>
 
         <div className="bg-slate-50 rounded-lg p-4">
           <h3 className="text-xs font-semibold text-slate-700 mb-3">

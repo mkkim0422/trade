@@ -121,14 +121,13 @@ export function classifyStore(
 
   let quadrant: Quadrant;
   if (nearbyClosedCount !== undefined) {
-    // 250m 반경 임계값 (강남구 250m 원당 평균 ~75개 폐점 기준 calibration).
-    //   c <= 30: 적은 편    /  c >= 80: 많은 편
+    // 250m 반경 단일선 임계 — 산점도와 시각 일치 (X=80, Y=50).
+    // 4사분면이 평면을 완전히 덮어 neutral 모호 영역 없음.
     const c = nearbyClosedCount;
     if (f >= 50 && c >= 80) quadrant = "paradox";
-    else if (f < 30 && c >= 80) quadrant = "danger";
-    else if (f >= 50 && c <= 30) quadrant = "golden";
-    else if (f < 30 && c <= 30) quadrant = "quiet";
-    else quadrant = "neutral";
+    else if (f < 50 && c >= 80) quadrant = "danger";
+    else if (f >= 50 && c < 80) quadrant = "golden";
+    else quadrant = "quiet"; // f < 50 && c < 80
   } else {
     // 격자(50m) 임계값. closures 분포: median 0, 격자 95%가 0~1, 상위 5% = 3+
     const c = bestGrid.closures;
