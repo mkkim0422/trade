@@ -1,6 +1,60 @@
 import type { Store } from "@/types";
 import { getDistance } from "./constants";
 import { getFootTrafficNearby, type FootTrafficData } from "./foottraffic";
+import { VIRTUAL_STORE_ID } from "./virtual-store";
+
+// 공간 기반 vacancyScore — 좌표 ±100m 내 가장 최근 폐업 매장의 경과 개월수.
+// 실 매장도 가상 매장도 같은 함수 → 같은 자리 = 같은 vacancyScore (일관성 확보).
+// self-exclusion 없음 (실 매장 자기 폐업도 후보) — 더 최근 다른 폐업이 있으면 그게 우선.
+function vacancyMonthsByLocation(
+  lat: number,
+  lng: number,
+  allStores: Store[],
+): number | null {
+  const today = new Date();
+  let bestMsc: number | null = null;
+  let bestDist = Infinity;
+  for (const s of allStores) {
+    if (!s.closeDate) continue;
+    const d = getDistance(lat, lng, s.lat, s.lng);
+    if (d > 100) continue;
+    const msc = Math.max(
+      0,
+      Math.floor(
+        (today.getTime() - new Date(s.closeDate).getTime()) /
+          (1000 * 60 * 60 * 24 * 30),
+      ),
+    );
+    if (
+      bestMsc === null ||
+      msc < bestMsc ||
+      (msc === bestMsc && d < bestDist)
+    ) {
+      bestMsc = msc;
+      bestDist = d;
+    }
+  }
+  return bestMsc;
+}
+
+// 가상 매장 areaScore 보정 — 인근 250m 매장 면적 중앙값을 가상 면적으로 사용.
+// 실 매장 자기 면적(예: 280㎡)과의 자동 격차 제거.
+function nearbyMedianArea(
+  lat: number,
+  lng: number,
+  allStores: Store[],
+  radius: number = 250,
+): number {
+  const areas: number[] = [];
+  for (const s of allStores) {
+    if (!(s.area > 0)) continue;
+    if (getDistance(lat, lng, s.lat, s.lng) > radius) continue;
+    areas.push(s.area);
+  }
+  if (areas.length === 0) return 50; // 폴백 (가상 기본값과 동일)
+  areas.sort((a, b) => a - b);
+  return areas[Math.floor(areas.length / 2)];
+}
 
 export interface LUDAnalysis {
   score: number;
@@ -176,6 +230,8 @@ export interface SECScore {
   vacancyScore?: number;
   longTermScore?: number;
   areaScore?: number;
+  // 250m 반경 실 폐업 카운트 (LUD 원시값). AI 진단 텍스트에서 사용.
+  nearbyClosedCount?: number;
   kind?: "best" | "worst";
   reasoning: string;
 }
@@ -401,17 +457,12 @@ export function calculateSECScoresWithFootTraffic(
       else foottrafficScore = 50;
     }
 
-    let monthsSinceClosed = 0;
-    if (store.closeDate) {
-      const closed = new Date(store.closeDate);
-      const today = new Date();
-      monthsSinceClosed = Math.max(
-        0,
-        Math.floor(
-          (today.getTime() - closed.getTime()) / (1000 * 60 * 60 * 24 * 30),
-        ),
-      );
-    }
+    // vacancyScore — 공간 기반 (calculateSingleStoreSEC와 동일).
+    const monthsSinceClosed = vacancyMonthsByLocation(
+      store.lat,
+      store.lng,
+      allStores,
+    );
 
     const longTermCount = durations.filter((d) => d >= 5).length;
     const longTermRate =
@@ -437,7 +488,8 @@ export function calculateSECScoresWithFootTraffic(
     }
 
     let vacancyScore: number;
-    if (monthsSinceClosed <= 3) vacancyScore = 100;
+    if (monthsSinceClosed === null) vacancyScore = 50;
+    else if (monthsSinceClosed <= 3) vacancyScore = 100;
     else if (monthsSinceClosed <= 6) vacancyScore = 85;
     else if (monthsSinceClosed <= 12) vacancyScore = 70;
     else if (monthsSinceClosed <= 24) vacancyScore = 55;
@@ -450,9 +502,14 @@ export function calculateSECScoresWithFootTraffic(
     else if (longTermRate >= 10) longTermScore = 55;
     else longTermScore = 40;
 
+    // areaScore — 가상 매장은 인근 중앙값, 실 매장은 자기 면적.
+    const effectiveArea =
+      store.id === VIRTUAL_STORE_ID
+        ? nearbyMedianArea(store.lat, store.lng, allStores, radius)
+        : store.area;
     let areaScore = 60;
-    if (store.area > 0) {
-      const a = store.area;
+    if (effectiveArea > 0) {
+      const a = effectiveArea;
       if (a >= 30 && a <= 100) areaScore = 100;
       else if ((a >= 20 && a < 30) || (a > 100 && a <= 150)) areaScore = 80;
       else if ((a >= 10 && a < 20) || (a > 150 && a <= 200)) areaScore = 65;
@@ -490,7 +547,7 @@ export function calculateSECScoresWithFootTraffic(
         categoryFitScore: categoryScore,
         nearbyCount,
         avgDuration,
-        monthsSinceClosed,
+        monthsSinceClosed: monthsSinceClosed ?? 0,
         dailyFoottraffic: scaledDaily,
         weekdayFoottraffic: scaledWeekday,
         weekendFoottraffic: scaledWeekend,
@@ -601,14 +658,14 @@ function generateSECReasoningWithFootTraffic(inputs: ReasoningInputs): string {
     const phrases = [
       `반경 250m 내 ${nearbyCount}개 폐업으로 적정 경쟁 수준입니다.`,
       `주변 폐업 ${nearbyCount}건으로 과도한 경쟁 없이 안정적입니다.`,
-      `인근 ${nearbyCount}곳 폐업은 상권 평균 수준으로 우려 없습니다.`,
+      `인근 ${nearbyCount}개 폐업은 상권 평균 수준으로 우려 없습니다.`,
     ];
     parts.push(phrases[pattern]);
   } else if (ludScore >= 50) {
     const phrases = [
       `반경 250m 내 ${nearbyCount}개 폐업으로 다소 경쟁이 있으나 관리 가능한 수준입니다.`,
       `주변 ${nearbyCount}건 폐업이 있어 진입 전 차별화 전략이 필요합니다.`,
-      `인근 폐업 ${nearbyCount}곳으로 경쟁 상황을 면밀히 검토해야 합니다.`,
+      `인근 폐업 ${nearbyCount}개로 경쟁 상황을 면밀히 검토해야 합니다.`,
     ];
     parts.push(phrases[pattern]);
   } else {
@@ -629,7 +686,7 @@ function generateSECReasoningWithFootTraffic(inputs: ReasoningInputs): string {
     }
   } else if (segScore >= 60) {
     parts.push(
-      `주변 매장 평균 ${avgDuration.toFixed(1)}년 영업 중이며, 장수 매장 ${longTermCount}곳이 상권을 지탱하고 있습니다.`,
+      `주변 매장 평균 ${avgDuration.toFixed(1)}년 영업 중이며, 장수 매장 ${longTermCount}개가 상권을 지탱하고 있습니다.`,
     );
   } else if (avgDuration > 0) {
     parts.push(
@@ -769,4 +826,181 @@ export function generateNarrative(
         : "안정 추세";
 
   return `이 입지는 폐업 위험도가 ${risk} 수준이며, 장수 매장 비율은 ${stability}합니다. 최근 폐업은 ${trendText}를 보이고 있어 ${ludAnalysis.patternLabel} 패턴으로 추정됩니다.`;
+}
+
+// 단일 매장 SEC 점수 계산 (B-3 추가).
+// 기존 calculateSECScoresWithFootTraffic의 forEach 본문 로직과 동일 — 가중치 변경 없음.
+// 매장 클릭 시 헤더 배지 + AI 진단용. useMemo로 캐시 권장.
+export function calculateSingleStoreSEC(
+  store: Store,
+  allStores: Store[],
+  foottrafficData: FootTrafficData[],
+  radius: number = 250,
+): SECScore {
+  const nearbyStores = allStores.filter((other) => {
+    if (other.id === store.id) return false;
+    const distance = getDistance(store.lat, store.lng, other.lat, other.lng);
+    return distance <= radius;
+  });
+
+  const nearbyCount = nearbyStores.length;
+
+  let ludScore = 100;
+  if (nearbyCount >= 50) ludScore = 10;
+  else if (nearbyCount >= 30) ludScore = 25;
+  else if (nearbyCount >= 20) ludScore = 40;
+  else if (nearbyCount >= 10) ludScore = 60;
+  else if (nearbyCount >= 5) ludScore = 80;
+  else ludScore = 95;
+
+  const durations = nearbyStores
+    .filter((s) => s.openDate && s.closeDate)
+    .map((s) => {
+      const start = new Date(s.openDate);
+      const end = new Date(s.closeDate as string);
+      return (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365);
+    });
+
+  const avgDuration =
+    durations.length > 0
+      ? durations.reduce((sum, d) => sum + d, 0) / durations.length
+      : 0;
+
+  const segScore = Math.min(100, avgDuration * 15);
+
+  const today = new Date();
+  const threeMonthsAgo = new Date(today);
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  const oneYearAgo = new Date(today);
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+  const recentClosures = nearbyStores.filter((s) => {
+    if (!s.closeDate) return false;
+    return new Date(s.closeDate) >= threeMonthsAgo;
+  }).length;
+
+  const yearlyClosures = nearbyStores.filter((s) => {
+    if (!s.closeDate) return false;
+    return new Date(s.closeDate) >= oneYearAgo;
+  }).length;
+
+  const monthlyRecent = recentClosures / 3;
+  const monthlyYearly = yearlyClosures / 12;
+  const acceleration =
+    monthlyYearly > 0 ? (monthlyRecent - monthlyYearly) / monthlyYearly : 0;
+
+  let trendScore = 50;
+  if (acceleration <= -0.3) trendScore = 100;
+  else if (acceleration <= -0.1) trendScore = 90;
+  else if (acceleration <= 0) trendScore = 80;
+  else if (acceleration <= 0.1) trendScore = 70;
+  else if (acceleration <= 0.3) trendScore = 60;
+  else if (acceleration <= 0.5) trendScore = 50;
+  else trendScore = 40;
+
+  const foottraffic = getFootTrafficNearby(
+    store.lat,
+    store.lng,
+    radius,
+    foottrafficData,
+  );
+  let foottrafficScore = 50;
+  if (foottraffic.gridCount > 0) {
+    const scaledDaily = foottraffic.dailyAvg * 1000;
+    if (scaledDaily >= 50000) foottrafficScore = 100;
+    else if (scaledDaily >= 30000) foottrafficScore = 90;
+    else if (scaledDaily >= 20000) foottrafficScore = 80;
+    else if (scaledDaily >= 10000) foottrafficScore = 70;
+    else if (scaledDaily >= 5000) foottrafficScore = 60;
+    else foottrafficScore = 50;
+  }
+
+  // vacancyScore — 공간 기반. self 폐업이 아니라 좌표 인근 100m 최근 폐업 시점.
+  // 실 매장도 가상 매장도 같은 입력 → 같은 좌표 = 같은 vacancyScore.
+  const monthsSinceClosed = vacancyMonthsByLocation(
+    store.lat,
+    store.lng,
+    allStores,
+  );
+
+  const longTermCount = durations.filter((d) => d >= 5).length;
+  const longTermRate =
+    durations.length > 0 ? (longTermCount / durations.length) * 100 : 0;
+
+  const sameCatDurations = nearbyStores
+    .filter((s) => s.category === store.category && s.openDate && s.closeDate)
+    .map((s) => {
+      const start = new Date(s.openDate);
+      const end = new Date(s.closeDate as string);
+      return (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365);
+    });
+
+  let categoryScore = 60;
+  if (sameCatDurations.length >= 2) {
+    const sameCatLongTermRate =
+      (sameCatDurations.filter((d) => d >= 5).length /
+        sameCatDurations.length) *
+      100;
+    if (sameCatLongTermRate >= 50) categoryScore = 85;
+    else if (sameCatLongTermRate >= 25) categoryScore = 65;
+    else categoryScore = 40;
+  }
+
+  let vacancyScore: number;
+  if (monthsSinceClosed === null) vacancyScore = 50;
+  else if (monthsSinceClosed <= 3) vacancyScore = 100;
+  else if (monthsSinceClosed <= 6) vacancyScore = 85;
+  else if (monthsSinceClosed <= 12) vacancyScore = 70;
+  else if (monthsSinceClosed <= 24) vacancyScore = 55;
+  else vacancyScore = 40;
+
+  let longTermScore: number;
+  if (longTermRate >= 60) longTermScore = 100;
+  else if (longTermRate >= 40) longTermScore = 85;
+  else if (longTermRate >= 25) longTermScore = 70;
+  else if (longTermRate >= 10) longTermScore = 55;
+  else longTermScore = 40;
+
+  // areaScore — 실 매장은 자기 면적, 가상 매장은 인근 250m 중앙값 (자동 만점 회피).
+  const effectiveArea =
+    store.id === VIRTUAL_STORE_ID
+      ? nearbyMedianArea(store.lat, store.lng, allStores, radius)
+      : store.area;
+  let areaScore = 60;
+  if (effectiveArea > 0) {
+    const a = effectiveArea;
+    if (a >= 30 && a <= 100) areaScore = 100;
+    else if ((a >= 20 && a < 30) || (a > 100 && a <= 150)) areaScore = 80;
+    else if ((a >= 10 && a < 20) || (a > 150 && a <= 200)) areaScore = 65;
+    else areaScore = 50;
+  }
+
+  // 1차 가중치 동일.
+  const totalScore =
+    ludScore * 0.25 +
+    segScore * 0.15 +
+    trendScore * 0.12 +
+    categoryScore * 0.12 +
+    vacancyScore * 0.08 +
+    longTermScore * 0.05 +
+    areaScore * 0.03 +
+    foottrafficScore * 0.2;
+
+  return {
+    storeId: store.id,
+    storeName: store.name,
+    lat: store.lat,
+    lng: store.lng,
+    totalScore: Math.round(totalScore * 10) / 10,
+    ludScore: Math.round(ludScore),
+    segScore: Math.round(segScore),
+    trendScore,
+    foottrafficScore: Math.round(foottrafficScore),
+    categoryScore: Math.round(categoryScore),
+    vacancyScore: Math.round(vacancyScore),
+    longTermScore: Math.round(longTermScore),
+    areaScore: Math.round(areaScore),
+    nearbyClosedCount: nearbyCount,
+    reasoning: "",
+  };
 }

@@ -7,6 +7,8 @@ import { getDistance } from "@/lib/constants";
 import { createMarkerHTML, getMarkerDesign } from "@/lib/marker-design";
 import DateFilterBar from "@/components/panels/DateFilterBar";
 import FilterBar from "@/components/panels/FilterBar";
+import ParadoxLayer from "@/components/map/ParadoxLayer";
+import VirtualStorePin from "@/components/map/VirtualStorePin";
 import type { Store } from "@/types";
 
 const INITIAL_CENTER = { lat: 37.5007, lng: 127.0368 };
@@ -15,7 +17,7 @@ const DEFAULT_ZOOM = 3;
 // 지도 중심 기준 고정 반경(m). 이 반경 안의 모든 폐점 매장을 표시하고
 // 동일 반경의 가이드 원을 그려 "표시 영역 = 분석 영역"을 시각적으로 일치시킴.
 // 강남구 평균 밀도 기준 100~150개 수준이며 box-shadow/will-change 최적화로 감당 가능.
-const FIXED_RADIUS_METERS = 300;
+const FIXED_RADIUS_METERS = 250;
 const HEATMAP_LIMIT = 500;
 // ~55m. 더 작은 움직임은 마커 재계산 스킵 (드래그 미세 떨림 무시).
 const CENTER_EPSILON = 5e-4;
@@ -23,6 +25,8 @@ const CENTER_EPSILON = 5e-4;
 export default function MapView() {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  // ParadoxLayer 등 자식 컴포넌트가 prop으로 받기 위한 state 노출. ref와 별도 유지.
+  const [mapInstance, setMapInstance] = useState<any>(null);
   const markersRef = useRef<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +39,9 @@ export default function MapView() {
   const setSelectedSEC = useDashboardStore((state) => state.setSelectedSEC);
   const selectedStore = useDashboardStore((state) => state.selectedStore);
   const categoryFilter = useDashboardStore((state) => state.categoryFilter);
+  const categoryFilterEnabled = useDashboardStore(
+    (state) => state.categoryFilterEnabled,
+  );
   const showHeatmap = useDashboardStore((state) => state.showHeatmap);
   const dateFilter = useDashboardStore((state) => state.dateFilter);
   const currentDong = useDashboardStore((state) => state.currentDong);
@@ -47,15 +54,30 @@ export default function MapView() {
   const setMapTargetCoord = useDashboardStore(
     (state) => state.setMapTargetCoord,
   );
+  const virtualStoreVisible = useDashboardStore(
+    (state) => state.virtualStoreVisible,
+  );
+  const virtualStorePosition = useDashboardStore(
+    (state) => state.virtualStorePosition,
+  );
+  const setVirtualStorePosition = useDashboardStore(
+    (state) => state.setVirtualStorePosition,
+  );
   const heatmapRef = useRef<any[]>([]);
   const goldenPinsRef = useRef<any[]>([]);
   const worstPinsRef = useRef<any[]>([]);
   const boundaryCircleRef = useRef<any>(null);
+  const radiusLineRef = useRef<any>(null);
+  const radiusLabelRef = useRef<any>(null);
   const markerNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const markerStoreMapRef = useRef<Map<string, Store>>(new Map());
   const prevSelectedIdRef = useRef<string | null>(null);
   const lastCenterRef = useRef<{ lat: number; lng: number }>(INITIAL_CENTER);
   const lastZoomRef = useRef<number>(DEFAULT_ZOOM);
+  // 프로그래매틱 pan(setMapTargetCoord 경유) 시 다음 idle에서 dong 자동 변경 억제.
+  // 매장 클릭 → 자동 setCenter → idle → detectDong → setCurrentDong이 우패널 TOP3를
+  // 의도치 않게 변경하던 버그 방지. 사용자 드래그는 영향 없음 (suppress 안 셋팅).
+  const suppressDongDetectRef = useRef<boolean>(false);
   const nearbyStoresRef = useRef<Store[]>([]);
   const overlayMapRef = useRef<Map<string, any>>(new Map());
   const currentDongRef = useRef<string | null>(null);
@@ -65,9 +87,16 @@ export default function MapView() {
   topSECByDongRef.current = topSECByDong;
   worstByDongRef.current = worstByDong;
 
+  // 카테고리(선택 시) + 날짜 필터를 적용. 업태 필터 마스터 스위치는 마커에만 영향
+  // (heatmap은 항상 전체 표시). 따라서 여기서는 zero-out 하지 않는다.
   const filteredStores = useMemo(() => {
     return stores.filter((s) => {
-      if (categoryFilter && s.category !== categoryFilter) return false;
+      if (
+        categoryFilterEnabled &&
+        categoryFilter &&
+        s.category !== categoryFilter
+      )
+        return false;
       if (dateFilter.startDate || dateFilter.endDate) {
         if (!s.closeDate) return false;
         if (dateFilter.startDate && s.closeDate < dateFilter.startDate)
@@ -77,7 +106,7 @@ export default function MapView() {
       }
       return true;
     });
-  }, [stores, categoryFilter, dateFilter]);
+  }, [stores, categoryFilter, categoryFilterEnabled, dateFilter]);
 
   const dongFilteredStores = useMemo(() => {
     if (!currentDong) return filteredStores;
@@ -90,6 +119,8 @@ export default function MapView() {
   //   1° lng ≈ 111,000m × cos(lat)  (Seoul ~37.5°에서 ~88,400m)
   // 박스가 원을 포함하므로 false negative 없음.
   const nearbyDisplayStores = useMemo(() => {
+    // 업태 필터 마스터 스위치 OFF → 마커 모두 숨김 (히트맵엔 영향 X).
+    if (!categoryFilterEnabled) return [];
     const cLat = mapCenter.lat;
     const cLng = mapCenter.lng;
     const latDelta = FIXED_RADIUS_METERS / 111_000;
@@ -104,7 +135,7 @@ export default function MapView() {
       }
     }
     return result;
-  }, [filteredStores, mapCenter]);
+  }, [filteredStores, mapCenter, categoryFilterEnabled]);
 
   // 히트맵은 pan에 따라 재계산하지 않음 — 동(行政洞) 단위로만 갱신.
   // pan마다 500개 Circle을 파괴/재생성하던 비용 제거.
@@ -137,15 +168,20 @@ export default function MapView() {
         nearbyDisplayStores.map((s) => s.id),
       );
       setMarkerVersion((v) => v + 1);
+      // 시각/AI 진단 카운트 불일치 디버그용. 가상 매장 클릭 시 자동 setCenter 후
+      // 이 값이 AI 진단 nearbyClosedCount(250m)와 근사해야 정상.
+      console.log(
+        `📍 가시 영역 매장: ${nearbyDisplayStores.length}개 (300m 박스 · 중심 ${mapCenter.lat.toFixed(5)},${mapCenter.lng.toFixed(5)})`,
+      );
     }
-  }, [nearbyDisplayStores]);
+  }, [nearbyDisplayStores, mapCenter]);
 
   const dongCount = dongFilteredStores.length;
 
   useEffect(() => {
-    fetch("/data/stores.json")
+    fetch("/data/stores-recent.json")
       .then((res) => {
-        if (!res.ok) throw new Error("stores.json 로드 실패");
+        if (!res.ok) throw new Error("stores-recent.json 로드 실패");
         return res.json();
       })
       .then((data: Store[]) => {
@@ -193,6 +229,7 @@ export default function MapView() {
           };
 
           mapInstanceRef.current = new window.kakao.maps.Map(container, options);
+          setMapInstance(mapInstanceRef.current);
           setIsLoading(false);
           setCurrentDong(INITIAL_DONG);
           console.log(
@@ -207,6 +244,21 @@ export default function MapView() {
     };
 
     initMap();
+  }, []);
+
+  // 우패널 접기/펼치기로 컨테이너 폭이 바뀌면 카카오맵이 자동 relayout 안 함 →
+  // 회색 빈 영역이 우측에 남음. ResizeObserver로 감지해서 강제 relayout.
+  useEffect(() => {
+    const container = mapRef.current;
+    if (!container) return;
+    const ro = new ResizeObserver(() => {
+      const map = mapInstanceRef.current;
+      if (map && typeof map.relayout === "function") {
+        map.relayout();
+      }
+    });
+    ro.observe(container);
+    return () => ro.disconnect();
   }, []);
 
   useEffect(() => {
@@ -266,7 +318,9 @@ export default function MapView() {
         setSelectedStore(store);
         setClusterStores(null);
         setSelectedSEC(null);
-        setMapTargetCoord({ lat: store.lat, lng: store.lng, zoom: 3 });
+        // zoom 5 ≈ 1km 범위 — 300m 표시 박스 안 매장이 화면 중앙 부근에 분포해
+        // AI 진단 "반경 250m N건"과 시각 마커 갯수가 일치.
+        setMapTargetCoord({ lat: store.lat, lng: store.lng, zoom: 5 });
       });
 
       markerNodesRef.current.set(store.id, node);
@@ -306,10 +360,18 @@ export default function MapView() {
         boundaryCircleRef.current.setMap(null);
         boundaryCircleRef.current = null;
       }
+      if (radiusLineRef.current) {
+        radiusLineRef.current.setMap(null);
+        radiusLineRef.current = null;
+      }
+      if (radiusLabelRef.current) {
+        radiusLabelRef.current.setMap(null);
+        radiusLabelRef.current = null;
+      }
     };
   }, []);
 
-  // 고정 반경 바운더리 원 (= FIXED_RADIUS_METERS).
+  // 고정 반경 바운더리 원 (= FIXED_RADIUS_METERS) + 가로 반지름 점선 + 라벨.
   // 위치만 갱신하고 반지름은 불변. setPosition으로 재활용해 GC 비용 최소화.
   useEffect(() => {
     if (!mapInstanceRef.current || isLoading) return;
@@ -318,24 +380,66 @@ export default function MapView() {
     }
 
     const center = new window.kakao.maps.LatLng(mapCenter.lat, mapCenter.lng);
+    // 가로 반지름 — 동쪽 끝점 (위도 동일, 경도 +R).
+    const lngDelta =
+      FIXED_RADIUS_METERS / (111000 * Math.cos((mapCenter.lat * Math.PI) / 180));
+    const east = new window.kakao.maps.LatLng(
+      mapCenter.lat,
+      mapCenter.lng + lngDelta,
+    );
+    const mid = new window.kakao.maps.LatLng(
+      mapCenter.lat,
+      mapCenter.lng + lngDelta / 2,
+    );
 
     if (boundaryCircleRef.current) {
       boundaryCircleRef.current.setPosition(center);
-      return;
+    } else {
+      const circle = new window.kakao.maps.Circle({
+        center,
+        radius: FIXED_RADIUS_METERS,
+        strokeWeight: 2,
+        strokeColor: "#3B82F6",
+        strokeOpacity: 0.7,
+        strokeStyle: "dashed",
+        fillColor: "#3B82F6",
+        fillOpacity: 0.1,
+      });
+      circle.setMap(mapInstanceRef.current);
+      boundaryCircleRef.current = circle;
     }
 
-    const circle = new window.kakao.maps.Circle({
-      center,
-      radius: FIXED_RADIUS_METERS,
-      strokeWeight: 2,
-      strokeColor: "#3B82F6",
-      strokeOpacity: 0.7,
-      strokeStyle: "dashed",
-      fillColor: "#3B82F6",
-      fillOpacity: 0.1,
-    });
-    circle.setMap(mapInstanceRef.current);
-    boundaryCircleRef.current = circle;
+    if (radiusLineRef.current) {
+      radiusLineRef.current.setPath([center, east]);
+    } else {
+      const line = new window.kakao.maps.Polyline({
+        path: [center, east],
+        strokeWeight: 2,
+        strokeColor: "#3B82F6",
+        strokeOpacity: 0.85,
+        strokeStyle: "dashed",
+      });
+      line.setMap(mapInstanceRef.current);
+      radiusLineRef.current = line;
+    }
+
+    if (radiusLabelRef.current) {
+      radiusLabelRef.current.setPosition(mid);
+    } else {
+      const content = document.createElement("div");
+      content.style.cssText =
+        "font-size:10px;color:#94A3B8;font-weight:500;white-space:nowrap;transform:translateY(-12px);pointer-events:none;text-shadow:0 0 2px rgba(255,255,255,0.8);";
+      content.textContent = `반지름 ${FIXED_RADIUS_METERS}m`;
+      const overlay = new window.kakao.maps.CustomOverlay({
+        position: mid,
+        content,
+        yAnchor: 1,
+        xAnchor: 0.5,
+        zIndex: 2,
+      });
+      overlay.setMap(mapInstanceRef.current);
+      radiusLabelRef.current = overlay;
+    }
   }, [mapCenter, isLoading]);
 
   useEffect(() => {
@@ -411,7 +515,14 @@ export default function MapView() {
       const zoom = map.getLevel();
 
       const dong = detectDong(lat, lng);
-      if (dong) setCurrentDong(dong.name);
+      if (dong) {
+        if (suppressDongDetectRef.current) {
+          // 프로그래매틱 pan 직후 — 첫 idle은 소비만 하고 dong 변경 안 함.
+          suppressDongDetectRef.current = false;
+        } else {
+          setCurrentDong(dong.name);
+        }
+      }
 
       const zoomChanged = zoom !== lastZoomRef.current;
       lastZoomRef.current = zoom;
@@ -631,6 +742,41 @@ export default function MapView() {
     console.log(`✅ 자동 줌 완료 (레벨 ${mapInstanceRef.current.getLevel()})`);
   }, [showWorstPins, isLoading]);
 
+  // 가상 매장 모드 — 지도 클릭 시 그 좌표에 가상 핀 배치 (드래그/이동은 핀 컴포넌트가 담당).
+  useEffect(() => {
+    if (!mapInstanceRef.current || isLoading) return;
+    if (typeof window === "undefined" || !window.kakao || !window.kakao.maps) {
+      return;
+    }
+    if (!virtualStoreVisible) return;
+
+    const map = mapInstanceRef.current;
+    const handleClick = (mouseEvent: any) => {
+      const latlng = mouseEvent.latLng;
+      if (!latlng) return;
+      const lat = latlng.getLat();
+      const lng = latlng.getLng();
+      console.log(
+        `🎯 가상 매장 배치: (${lat.toFixed(5)}, ${lng.toFixed(5)})`,
+      );
+      setVirtualStorePosition({ lat, lng });
+      // 시각/데이터 일치: 가상 매장을 지도 중심으로 자동 이동. mapCenter 기준 300m 박스가
+      // 가상 매장 250m AI 카운트와 겹쳐 화면 마커 ≈ "반경 250m N건"이 됨.
+      // zoom 5 ≈ 1km 범위. zoom 3은 너무 깊어 250m 매장이 화면 끝으로 몰림.
+      // 실 매장 클릭(line 285)도 동일하게 zoom 5로 이동.
+      setMapTargetCoord({ lat, lng, zoom: 5 });
+    };
+    window.kakao.maps.event.addListener(map, "click", handleClick);
+    return () => {
+      window.kakao.maps.event.removeListener(map, "click", handleClick);
+    };
+  }, [
+    virtualStoreVisible,
+    isLoading,
+    setVirtualStorePosition,
+    setMapTargetCoord,
+  ]);
+
   useEffect(() => {
     if (!mapTargetCoord || !mapInstanceRef.current || isLoading) return;
     if (typeof window === "undefined" || !window.kakao || !window.kakao.maps) {
@@ -642,6 +788,8 @@ export default function MapView() {
     console.log(
       `🎯 지도 이동: (${lat.toFixed(5)}, ${lng.toFixed(5)})${zoom !== undefined ? `, 레벨 ${zoom}` : ""}`,
     );
+    // 프로그래매틱 pan — 다음 idle의 dong 자동 변경 억제.
+    suppressDongDetectRef.current = true;
     if (typeof map.relayout === "function") map.relayout();
     map.setCenter(new window.kakao.maps.LatLng(lat, lng));
     if (zoom !== undefined && map.getLevel() > zoom) {
@@ -666,9 +814,31 @@ export default function MapView() {
     <>
       <div
         ref={mapRef}
-        className="absolute inset-0"
+        className={`absolute inset-0 ${
+          virtualStoreVisible && !virtualStorePosition
+            ? "map-virtual-mode"
+            : ""
+        }`}
         style={{ width: "100%", height: "100%" }}
       />
+
+      {/* 함정 자리 격자 레이어 — 카카오맵에 직접 SVG 오버레이. DOM 없음 (return null). */}
+      {mapInstance && stores.length > 0 && (
+        <ParadoxLayer mapInstance={mapInstance} allStores={stores} />
+      )}
+
+      {/* 가상 매장 핀 (발표 클라이맥스). DOM 없음. */}
+      {mapInstance && <VirtualStorePin mapInstance={mapInstance} />}
+
+      {/* 가상 모드 안내 토스트 — position 없을 때만 노출. */}
+      {virtualStoreVisible && (
+        <div
+          className="absolute top-20 left-1/2 -translate-x-1/2 bg-purple-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-semibold"
+          style={{ zIndex: 1000 }}
+        >
+          📍 지도 클릭으로 가상 매장 배치 · 드래그로 이동
+        </div>
+      )}
 
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-100 z-10">

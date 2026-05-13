@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Store } from "@/types";
 import type { SECScore } from "@/lib/analysis";
+import type { GridAggregate } from "@/lib/grid-aggregates";
 
 interface DashboardState {
   selectedStore: Store | null;
@@ -8,6 +9,10 @@ interface DashboardState {
 
   categoryFilter: string | null;
   setCategoryFilter: (category: string | null) => void;
+  // 업태 필터 ON/OFF 마스터 스위치 — false면 categoryFilter 무시(전체 매장 표시).
+  // TOP3 토글 ON 시 자동 false (발표 시연 우선).
+  categoryFilterEnabled: boolean;
+  setCategoryFilterEnabled: (enabled: boolean) => void;
 
   showHeatmap: boolean;
   setShowHeatmap: (show: boolean) => void;
@@ -49,6 +54,28 @@ interface DashboardState {
   setMapTargetCoord: (
     coord: { lat: number; lng: number; zoom?: number } | null,
   ) => void;
+
+  // ── 묶음 A: 함정 자리 격자 레이어 ───────────────────────────
+  showParadoxLayer: boolean;
+  setShowParadoxLayer: (show: boolean) => void;
+  selectedParadoxGrid: GridAggregate | null;
+  setSelectedParadoxGrid: (grid: GridAggregate | null) => void;
+
+  // ── 묶음 B placeholder (값만 잡고 사용은 묶음 B에서) ────────
+  // 시간축 슬라이더의 현재 월 (YYYY-MM). null이면 전체 누적.
+  timelineMonth: string | null;
+  setTimelineMonth: (month: string | null) => void;
+  // 8지표 그리드에서 펼쳐진 카드. 디폴트 'lud'.
+  expandedMetric: "lud" | "seg" | "trend" | "foot" | null;
+  setExpandedMetric: (m: "lud" | "seg" | "trend" | "foot" | null) => void;
+
+  // ── 가상 매장 시뮬레이션 (발표 클라이맥스용) ────────────────
+  virtualStoreVisible: boolean;
+  setVirtualStoreVisible: (v: boolean) => void;
+  virtualStorePosition: { lat: number; lng: number } | null;
+  setVirtualStorePosition: (p: { lat: number; lng: number } | null) => void;
+  virtualStoreBusiness: string;
+  setVirtualStoreBusiness: (b: string) => void;
 }
 
 export const useDashboardStore = create<DashboardState>((set) => ({
@@ -57,6 +84,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
   categoryFilter: null,
   setCategoryFilter: (category) => set({ categoryFilter: category }),
+  categoryFilterEnabled: true,
+  setCategoryFilterEnabled: (enabled) =>
+    set({ categoryFilterEnabled: enabled }),
 
   showHeatmap: false,
   setShowHeatmap: (show) => set({ showHeatmap: show }),
@@ -90,4 +120,21 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
   mapTargetCoord: null,
   setMapTargetCoord: (coord) => set({ mapTargetCoord: coord }),
+
+  showParadoxLayer: false,
+  setShowParadoxLayer: (show) => set({ showParadoxLayer: show }),
+  selectedParadoxGrid: null,
+  setSelectedParadoxGrid: (grid) => set({ selectedParadoxGrid: grid }),
+
+  timelineMonth: null,
+  setTimelineMonth: (month) => set({ timelineMonth: month }),
+  expandedMetric: "lud",
+  setExpandedMetric: (m) => set({ expandedMetric: m }),
+
+  virtualStoreVisible: false,
+  setVirtualStoreVisible: (v) => set({ virtualStoreVisible: v }),
+  virtualStorePosition: null,
+  setVirtualStorePosition: (p) => set({ virtualStorePosition: p }),
+  virtualStoreBusiness: "한식",
+  setVirtualStoreBusiness: (b) => set({ virtualStoreBusiness: b }),
 }));

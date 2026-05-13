@@ -1,8 +1,18 @@
 @import "tailwindcss";
 
+/* html.dark 클래스를 셀렉터로 사용 (Tailwind 4 기본은 prefers-color-scheme).
+   덕분에 컴포넌트에서 dark:bg-slate-800 같이 쓸 수 있음. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+}
+
+html.dark {
+  --background: #0F172A;
+  --foreground: #F1F5F9;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -12,17 +22,112 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ─────────────────────────────────────────────────────────
+ * Dark mode overrides — utility class flips under html.dark.
+ * Per-component dark: variants 대신 코드량 폭증 회피 위해
+ * 자주 쓰이는 회색/흰색 계열을 일괄 매핑.
+ * 강조 색상(red-500/purple-600 등)은 그대로 유지.
+ * ───────────────────────────────────────────────────────── */
+html.dark .bg-white {
+  background-color: #1E293B;
+}
+html.dark .bg-slate-50 {
+  background-color: #0F172A;
+}
+html.dark .bg-slate-100 {
+  background-color: #1E293B;
+}
+html.dark .bg-slate-200 {
+  background-color: #334155;
+}
+html.dark .bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.12);
+}
+html.dark .bg-purple-50 {
+  background-color: rgba(168, 85, 247, 0.14);
+}
+html.dark .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.14);
+}
+html.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.14);
+}
+html.dark .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.14);
+}
+html.dark .bg-yellow-50 {
+  background-color: rgba(234, 179, 8, 0.14);
+}
+html.dark .bg-orange-50 {
+  background-color: rgba(249, 115, 22, 0.14);
+}
+html.dark .bg-rose-50 {
+  background-color: rgba(244, 63, 94, 0.14);
+}
+html.dark .bg-green-50 {
+  background-color: rgba(34, 197, 94, 0.14);
+}
+
+html.dark .text-slate-900 {
+  color: #F1F5F9;
+}
+html.dark .text-slate-800 {
+  color: #E2E8F0;
+}
+html.dark .text-slate-700 {
+  color: #CBD5E1;
+}
+html.dark .text-slate-600 {
+  color: #94A3B8;
+}
+html.dark .text-slate-500 {
+  color: #94A3B8;
+}
+html.dark .text-slate-400 {
+  color: #64748B;
+}
+html.dark .text-slate-300 {
+  color: #475569;
+}
+
+html.dark .border-white,
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-300 {
+  border-color: #334155;
+}
+html.dark .divide-slate-200 > * + * {
+  border-color: #334155;
+}
+
+/* hover state 보정 — light에서 100/200 darken은 dark에서 lighten 효과로 뒤집기. */
+html.dark .hover\:bg-slate-50:hover {
+  background-color: #1E293B;
+}
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #334155;
+}
+html.dark .hover\:bg-slate-200:hover {
+  background-color: #475569;
+}
+
+/* recharts 격자선 — 라이트는 거의 안 보이는 슬레이트, 다크는 더 어둡게. */
+html.dark .recharts-cartesian-grid line {
+  stroke: #334155;
+}
+html.dark .recharts-cartesian-axis-tick text {
+  fill: #94A3B8 !important;
+}
+
+/* 카카오맵 컨테이너 자체는 그대로 두되, 둘러싼 영역만 다크. */
+html.dark .map-container-light {
+  background: #0F172A;
 }
 
 @keyframes pulsering {
@@ -35,4 +140,114 @@ body {
     transform: scale(1.1);
     opacity: 0.7;
   }
+}
+
+@keyframes intro-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.intro-fade-in {
+  animation: intro-fade-in 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes intro-glow {
+  0%,
+  100% {
+    text-shadow:
+      0 0 24px rgba(255, 255, 255, 0.25),
+      0 0 80px rgba(168, 85, 247, 0.15);
+  }
+  50% {
+    text-shadow:
+      0 0 36px rgba(255, 255, 255, 0.35),
+      0 0 120px rgba(168, 85, 247, 0.25);
+  }
+}
+
+.intro-glow {
+  animation: intro-glow 3s ease-in-out infinite;
+}
+
+@keyframes card-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-reveal {
+  animation: card-reveal 280ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.pulse-dot {
+  animation: pulse-dot 900ms ease-in-out infinite;
+}
+
+/* 가상 매장 핀 — 보라색 펄스 ring. 다른 마커보다 잘 띄도록 좀 더 강하게. */
+@keyframes virtual-pin-pulse {
+  0% {
+    transform: translate(-50%, 0) scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-50%, 0) scale(1.7);
+    opacity: 0;
+  }
+}
+
+.virtual-pin-pulse {
+  animation: virtual-pin-pulse 1.4s ease-out infinite;
+}
+
+/* 인트로 → 대시보드 진입 직후 주소 검색창 펄스. 5초 후 자동 종료 또는 사용자 클릭. */
+@keyframes search-entry-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(59, 130, 246, 0.55),
+      0 0 0 0 rgba(59, 130, 246, 0);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(59, 130, 246, 0.25),
+      0 0 14px 4px rgba(59, 130, 246, 0.2);
+  }
+}
+
+.search-entry-pulse {
+  animation: search-entry-pulse 1.4s ease-in-out infinite;
+}
+
+/* 가상 매장 모드 — 지도 컨테이너 + 카카오맵 내부 모든 자손에 핀 커서 강제.
+   카카오 맵은 내부 div에 자체 cursor(grab 등)을 inline으로 박아두기 때문에
+   부모에 cursor만 주면 hover 시 무시된다. !important + 와일드카드 자손으로 덮어쓴다. */
+.map-virtual-mode,
+.map-virtual-mode * {
+  cursor:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='32' viewBox='0 0 24 32'><path d='M12 0C5.4 0 0 5.4 0 12c0 7.5 12 20 12 20s12-12.5 12-20c0-6.6-5.4-12-12-12z' fill='%23A855F7' stroke='%23fff' stroke-width='2'/><circle cx='12' cy='12' r='4' fill='%23fff'/></svg>")
+      12 32,
+    crosshair !important;
 }

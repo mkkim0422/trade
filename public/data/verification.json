@@ -1,0 +1,690 @@
+{
+  "computedAt": "2026-05-12T08:39:16.427Z",
+  "hypothesis": "함정 자리는 전염성을 가진다 — 한 매장이 망하면 같은 자리에서 다음 폐업까지 시간이 다른 사분면보다 짧다.",
+  "intervalStats": {
+    "paradox": {
+      "count": 320,
+      "measured": 320,
+      "meanMonths": 0.9,
+      "medianMonths": 0.4,
+      "clusterRate": 0.981
+    },
+    "golden": {
+      "count": 1160,
+      "measured": 1144,
+      "meanMonths": 1.7,
+      "medianMonths": 0.7,
+      "clusterRate": 0.936
+    },
+    "risk": {
+      "count": 1014,
+      "measured": 1013,
+      "meanMonths": 1.2,
+      "medianMonths": 0.5,
+      "clusterRate": 0.971
+    },
+    "calm": {
+      "count": 1523,
+      "measured": 1497,
+      "meanMonths": 2,
+      "medianMonths": 0.8,
+      "clusterRate": 0.918
+    }
+  },
+  "caseStudies": [
+    {
+      "gid": "다사593b449a",
+      "dong": "역삼동",
+      "location": "역삼동 일대",
+      "centerLat": 37.50301,
+      "centerLng": 127.03686,
+      "radiusM": 100,
+      "spanMonths": 11.7,
+      "storeCount": 33,
+      "stores": [
+        {
+          "id": "store_8080",
+          "name": "청춘꼬마김밥 역삼점",
+          "business": "분식",
+          "openDate": "2024-04-24",
+          "closeDate": "2025-02-18",
+          "durationYears": 0.8,
+          "gapFromPrevMonths": null
+        },
+        {
+          "id": "store_19705",
+          "name": "수향푸드",
+          "business": "한식",
+          "openDate": "2023-12-13",
+          "closeDate": "2025-02-25",
+          "durationYears": 1.2,
+          "gapFromPrevMonths": 0.2
+        },
+        {
+          "id": "store_3034",
+          "name": "CP company(씨피컴퍼니)",
+          "business": "한식",
+          "openDate": "2024-01-02",
+          "closeDate": "2025-03-11",
+          "durationYears": 1.2,
+          "gapFromPrevMonths": 0.5
+        },
+        {
+          "id": "store_14136",
+          "name": "치킨먹고 팔자피자 강남점",
+          "business": "한식",
+          "openDate": "2024-01-02",
+          "closeDate": "2025-03-11",
+          "durationYears": 1.2,
+          "gapFromPrevMonths": 0
+        },
+        {
+          "id": "store_26140",
+          "name": "덮담 강남점",
+          "business": "한식",
+          "openDate": "2024-09-12",
+          "closeDate": "2025-03-31",
+          "durationYears": 0.5,
+          "gapFromPrevMonths": 0.7
+        },
+        {
+          "id": "store_24345",
+          "name": "닥엔돈스 강남역삼점",
+          "business": "한식",
+          "openDate": "2021-02-17",
+          "closeDate": "2025-04-09",
+          "durationYears": 4.1,
+          "gapFromPrevMonths": 0.3
+        },
+        {
+          "id": "store_48332",
+          "name": "FULL(풀)밭",
+          "business": "한식",
+          "openDate": "2024-05-30",
+          "closeDate": "2025-04-09",
+          "durationYears": 0.9,
+          "gapFromPrevMonths": 0
+        },
+        {
+          "id": "store_3725",
+          "name": "등화",
+          "business": "중국식",
+          "openDate": "2021-08-26",
+          "closeDate": "2025-04-23",
+          "durationYears": 3.7,
+          "gapFromPrevMonths": 0.5
+        },
+        {
+          "id": "store_1211",
+          "name": "금강식당",
+          "business": "경양식",
+          "openDate": "2009-11-26",
+          "closeDate": "2025-05-26",
+          "durationYears": 15.5,
+          "gapFromPrevMonths": 1.1
+        },
+        {
+          "id": "store_12684",
+          "name": "귀한족발 역삼점",
+          "business": "한식",
+          "openDate": "2022-05-09",
+          "closeDate": "2025-06-05",
+          "durationYears": 3.1,
+          "gapFromPrevMonths": 0.3
+        },
+        {
+          "id": "store_34802",
+          "name": "마이리틀케이브(MY LITTLE CAVE)",
+          "business": "기타",
+          "openDate": "2022-02-28",
+          "closeDate": "2025-06-27",
+          "durationYears": 3.3,
+          "gapFromPrevMonths": 0.7
+        },
+        {
+          "id": "store_8325",
+          "name": "포케아(pokea)",
+          "business": "외국음식전문점(인도,태국등)",
+          "openDate": "2025-05-09",
+          "closeDate": "2025-07-03",
+          "durationYears": 0.2,
+          "gapFromPrevMonths": 0.2
+        },
+        {
+          "id": "store_39547",
+          "name": "글로벌 보울즈(Global bowls)",
+          "business": "한식",
+          "openDate": "2025-05-23",
+          "closeDate": "2025-07-03",
+          "durationYears": 0.1,
+          "gapFromPrevMonths": 0
+        },
+        {
+          "id": "store_46328",
+          "name": "치밥 양밥 스밥 Chirambs 치양스 강남점",
+          "business": "한식",
+          "openDate": "2025-05-23",
+          "closeDate": "2025-07-03",
+          "durationYears": 0.1,
+          "gapFromPrevMonths": 0
+        },
+        {
+          "id": "store_45613",
+          "name": "주식회사 어니스트테이블",
+          "business": "한식",
+          "openDate": "2020-06-04",
+          "closeDate": "2025-07-08",
+          "durationYears": 5.1,
+          "gapFromPrevMonths": 0.2
+        },
+        {
+          "id": "store_17711",
+          "name": "Uncle Bob(엉클밥)",
+          "business": "한식",
+          "openDate": "2022-05-23",
+          "closeDate": "2025-07-28",
+          "durationYears": 3.2,
+          "gapFromPrevMonths": 0.7
+        },
+        {
+          "id": "store_17269",
+          "name": "타이 969",
+          "business": "외국음식전문점(인도,태국등)",
+          "openDate": "2024-04-24",
+          "closeDate": "2025-08-12",
+          "durationYears": 1.3,
+          "gapFromPrevMonths": 0.5
+        },
+        {
+          "id": "store_49901",
+          "name": "구만족발보쌈",
+          "business": "한식",
+          "openDate": "2025-03-19",
+          "closeDate": "2025-09-01",
+          "durationYears": 0.5,
+          "gapFromPrevMonths": 0.7
+        },
+        {
+          "id": "store_3828",
+          "name": "다감",
+          "business": "한식",
+          "openDate": "2024-02-29",
+          "closeDate": "2025-09-19",
+          "durationYears": 1.6,
+          "gapFromPrevMonths": 0.6
+        },
+        {
+          "id": "store_42185",
+          "name": "진심마라",
+          "business": "중국식",
+          "openDate": "2025-06-12",
+          "closeDate": "2025-09-22",
+          "durationYears": 0.3,
+          "gapFromPrevMonths": 0.1
+        },
+        {
+          "id": "store_32069",
+          "name": "비포베이글",
+          "business": "기타",
+          "openDate": "2022-07-07",
+          "closeDate": "2025-09-30",
+          "durationYears": 3.2,
+          "gapFromPrevMonths": 0.3
+        },
+        {
+          "id": "store_47361",
+          "name": "멘부리 강남1호점",
+          "business": "일식",
+          "openDate": "2023-02-01",
+          "closeDate": "2025-10-01",
+          "durationYears": 2.7,
+          "gapFromPrevMonths": 0
+        },
+        {
+          "id": "store_42395",
+          "name": "밥밥밥",
+          "business": "한식",
+          "openDate": "2021-12-01",
+          "closeDate": "2025-10-24",
+          "durationYears": 3.9,
+          "gapFromPrevMonths": 0.8
+        },
+        {
+          "id": "store_46644",
+          "name": "브루클린 바베큐",
+          "business": "기타",
+          "openDate": "2021-12-01",
+          "closeDate": "2025-10-24",
+          "durationYears": 3.9,
+          "gapFromPrevMonths": 0
+        },
+        {
+          "id": "store_10147",
+          "name": "더귀한",
+          "business": "한식",
+          "openDate": "2025-01-06",
+          "closeDate": "2026-01-12",
+          "durationYears": 1,
+          "gapFromPrevMonths": 2.6
+        },
+        {
+          "id": "store_19490",
+          "name": "남산국밥",
+          "business": "한식",
+          "openDate": "2025-01-06",
+          "closeDate": "2026-01-12",
+          "durationYears": 1,
+          "gapFromPrevMonths": 0
+        },
+        {
+          "id": "store_45296",
+          "name": "딜리버리 킹",
+          "business": "한식",
+          "openDate": "2019-06-07",
+          "closeDate": "2026-01-13",
+          "durationYears": 6.6,
+          "gapFromPrevMonths": 0
+        },
+        {
+          "id": "store_13138",
+          "name": "마라런",
+          "business": "중국식",
+          "openDate": "2024-04-29",
+          "closeDate": "2026-01-19",
+          "durationYears": 1.7,
+          "gapFromPrevMonths": 0.2
+        },
+        {
+          "id": "store_40376",
+          "name": "하모찜닭",
+          "business": "한식",
+          "openDate": "2025-09-15",
+          "closeDate": "2026-01-28",
+          "durationYears": 0.4,
+          "gapFromPrevMonths": 0.3
+        },
+        {
+          "id": "store_45822",
+          "name": "제6부대",
+          "business": "한식",
+          "openDate": "2025-07-08",
+          "closeDate": "2026-01-28",
+          "durationYears": 0.6,
+          "gapFromPrevMonths": 0
+        },
+        {
+          "id": "store_17860",
+          "name": "월광화커피",
+          "business": "경양식",
+          "openDate": "2019-12-23",
+          "closeDate": "2026-02-04",
+          "durationYears": 6.1,
+          "gapFromPrevMonths": 0.2
+        },
+        {
+          "id": "store_29202",
+          "name": "위씨앤엠",
+          "business": "한식",
+          "openDate": "2025-07-16",
+          "closeDate": "2026-02-10",
+          "durationYears": 0.6,
+          "gapFromPrevMonths": 0.2
+        },
+        {
+          "id": "store_47590",
+          "name": "뉴다운",
+          "business": "한식",
+          "openDate": "2022-09-02",
+          "closeDate": "2026-02-10",
+          "durationYears": 3.4,
+          "gapFromPrevMonths": 0
+        }
+      ]
+    },
+    {
+      "gid": "다사576b464b",
+      "dong": "논현동",
+      "location": "논현동 일대",
+      "centerLat": 37.5082,
+      "centerLng": 127.0239,
+      "radiusM": 100,
+      "spanMonths": 10.8,
+      "storeCount": 11,
+      "stores": [
+        {
+          "id": "store_25728",
+          "name": "얼큰이네",
+          "business": "한식",
+          "openDate": "2013-10-22",
+          "closeDate": "2023-05-16",
+          "durationYears": 9.6,
+          "gapFromPrevMonths": null
+        },
+        {
+          "id": "store_39907",
+          "name": "천사곱창 논현점",
+          "business": "한식",
+          "openDate": "2018-09-07",
+          "closeDate": "2023-05-19",
+          "durationYears": 4.7,
+          "gapFromPrevMonths": 0.1
+        },
+        {
+          "id": "store_2510",
+          "name": "곱창이야기 청담에스에이치그룹",
+          "business": "한식",
+          "openDate": "2004-11-09",
+          "closeDate": "2023-06-13",
+          "durationYears": 18.6,
+          "gapFromPrevMonths": 0.8
+        },
+        {
+          "id": "store_26230",
+          "name": "스시롭다",
+          "business": "일식",
+          "openDate": "2019-06-19",
+          "closeDate": "2023-06-27",
+          "durationYears": 4,
+          "gapFromPrevMonths": 0.5
+        },
+        {
+          "id": "store_42081",
+          "name": "고푸드코리아",
+          "business": "한식",
+          "openDate": "2021-10-28",
+          "closeDate": "2023-08-07",
+          "durationYears": 1.8,
+          "gapFromPrevMonths": 1.3
+        },
+        {
+          "id": "store_48173",
+          "name": "홀덤델루나",
+          "business": "한식",
+          "openDate": "2023-06-08",
+          "closeDate": "2023-08-17",
+          "durationYears": 0.2,
+          "gapFromPrevMonths": 0.3
+        },
+        {
+          "id": "store_9355",
+          "name": "몽드 Monde",
+          "business": "기타",
+          "openDate": "2018-10-02",
+          "closeDate": "2023-10-16",
+          "durationYears": 5,
+          "gapFromPrevMonths": 2
+        },
+        {
+          "id": "store_22052",
+          "name": "구구족 강남논현점",
+          "business": "한식",
+          "openDate": "2022-03-16",
+          "closeDate": "2024-01-08",
+          "durationYears": 1.8,
+          "gapFromPrevMonths": 2.8
+        },
+        {
+          "id": "store_26821",
+          "name": "완미족발 논현분점",
+          "business": "한식",
+          "openDate": "2023-06-14",
+          "closeDate": "2024-01-18",
+          "durationYears": 0.6,
+          "gapFromPrevMonths": 0.3
+        },
+        {
+          "id": "store_18999",
+          "name": "오만의탑",
+          "business": "한식",
+          "openDate": "2023-08-24",
+          "closeDate": "2024-03-15",
+          "durationYears": 0.6,
+          "gapFromPrevMonths": 1.9
+        },
+        {
+          "id": "store_39935",
+          "name": "대림국수",
+          "business": "일식",
+          "openDate": "2015-11-12",
+          "closeDate": "2024-04-08",
+          "durationYears": 8.4,
+          "gapFromPrevMonths": 0.8
+        }
+      ]
+    },
+    {
+      "gid": "다사593b475b",
+      "dong": "신사동",
+      "location": "신사동 일대",
+      "centerLat": 37.52021,
+      "centerLng": 127.02297,
+      "radiusM": 100,
+      "spanMonths": 11.7,
+      "storeCount": 11,
+      "stores": [
+        {
+          "id": "store_12725",
+          "name": "프레임 신사 본점",
+          "business": "한식",
+          "openDate": "2019-05-10",
+          "closeDate": "2024-12-30",
+          "durationYears": 5.6,
+          "gapFromPrevMonths": null
+        },
+        {
+          "id": "store_8704",
+          "name": "구스아일랜드 하우스오브홉",
+          "business": "외국음식전문점(인도,태국등)",
+          "openDate": "2021-04-30",
+          "closeDate": "2025-02-03",
+          "durationYears": 3.8,
+          "gapFromPrevMonths": 1.1
+        },
+        {
+          "id": "store_29814",
+          "name": "나베이크",
+          "business": "기타",
+          "openDate": "2023-05-24",
+          "closeDate": "2025-04-14",
+          "durationYears": 1.9,
+          "gapFromPrevMonths": 2.3
+        },
+        {
+          "id": "store_27562",
+          "name": "디제고(DIJEGO)",
+          "business": "한식",
+          "openDate": "2021-11-17",
+          "closeDate": "2025-04-21",
+          "durationYears": 3.4,
+          "gapFromPrevMonths": 0.2
+        },
+        {
+          "id": "store_2681",
+          "name": "(주)감성타코 가로수길점",
+          "business": "경양식",
+          "openDate": "2017-05-04",
+          "closeDate": "2025-07-29",
+          "durationYears": 8.2,
+          "gapFromPrevMonths": 3.3
+        },
+        {
+          "id": "store_24951",
+          "name": "BSK CAFE(비에스케이 카페)",
+          "business": "한식",
+          "openDate": "2012-11-05",
+          "closeDate": "2025-08-07",
+          "durationYears": 12.8,
+          "gapFromPrevMonths": 0.3
+        },
+        {
+          "id": "store_21415",
+          "name": "안주집",
+          "business": "한식",
+          "openDate": "2020-11-19",
+          "closeDate": "2025-10-01",
+          "durationYears": 4.9,
+          "gapFromPrevMonths": 1.8
+        },
+        {
+          "id": "store_23824",
+          "name": "몽글몽글 가로수길점",
+          "business": "일식",
+          "openDate": "2008-03-27",
+          "closeDate": "2025-10-15",
+          "durationYears": 17.6,
+          "gapFromPrevMonths": 0.5
+        },
+        {
+          "id": "store_61",
+          "name": "어퍼웨스트다이닝",
+          "business": "경양식",
+          "openDate": "2018-07-12",
+          "closeDate": "2025-12-09",
+          "durationYears": 7.4,
+          "gapFromPrevMonths": 1.8
+        },
+        {
+          "id": "store_18720",
+          "name": "어퍼웨스트",
+          "business": "경양식",
+          "openDate": "2012-12-04",
+          "closeDate": "2025-12-10",
+          "durationYears": 13,
+          "gapFromPrevMonths": 0
+        },
+        {
+          "id": "store_20115",
+          "name": "루비",
+          "business": "경양식",
+          "openDate": "1998-04-30",
+          "closeDate": "2025-12-22",
+          "durationYears": 27.7,
+          "gapFromPrevMonths": 0.4
+        }
+      ]
+    },
+    {
+      "gid": "다사611a462b",
+      "dong": "삼성동",
+      "location": "삼성동 일대",
+      "centerLat": 37.51173,
+      "centerLng": 127.0498,
+      "radiusM": 100,
+      "spanMonths": 4.9,
+      "storeCount": 7,
+      "stores": [
+        {
+          "id": "store_34177",
+          "name": "엘에이북창동순두부",
+          "business": "한식",
+          "openDate": "1998-02-09",
+          "closeDate": "2024-05-22",
+          "durationYears": 26.3,
+          "gapFromPrevMonths": null
+        },
+        {
+          "id": "store_17018",
+          "name": "치사나(Chisana)",
+          "business": "일식",
+          "openDate": "2022-01-03",
+          "closeDate": "2024-08-06",
+          "durationYears": 2.6,
+          "gapFromPrevMonths": 2.5
+        },
+        {
+          "id": "store_39821",
+          "name": "금탄",
+          "business": "일식",
+          "openDate": "2022-12-27",
+          "closeDate": "2024-08-13",
+          "durationYears": 1.6,
+          "gapFromPrevMonths": 0.2
+        },
+        {
+          "id": "store_34485",
+          "name": "zip(집)",
+          "business": "기타",
+          "openDate": "2017-08-30",
+          "closeDate": "2024-09-27",
+          "durationYears": 7.1,
+          "gapFromPrevMonths": 1.5
+        },
+        {
+          "id": "store_16119",
+          "name": "제이갸또 삼성점(한시적)",
+          "business": "한식",
+          "openDate": "2024-10-17",
+          "closeDate": "2024-10-19",
+          "durationYears": 0,
+          "gapFromPrevMonths": 0.7
+        },
+        {
+          "id": "store_23954",
+          "name": "지칸(한시적)",
+          "business": "일식",
+          "openDate": "2024-10-14",
+          "closeDate": "2024-10-19",
+          "durationYears": 0,
+          "gapFromPrevMonths": 0
+        },
+        {
+          "id": "store_23955",
+          "name": "비어플라주(한시적)",
+          "business": "기타",
+          "openDate": "2024-10-15",
+          "closeDate": "2024-10-19",
+          "durationYears": 0,
+          "gapFromPrevMonths": 0
+        }
+      ]
+    },
+    {
+      "gid": "다사601b451a",
+      "dong": "대치동",
+      "location": "대치동 일대",
+      "centerLat": 37.49356,
+      "centerLng": 127.06238,
+      "radiusM": 100,
+      "spanMonths": 10.1,
+      "storeCount": 4,
+      "stores": [
+        {
+          "id": "store_38522",
+          "name": "청담찜닭",
+          "business": "한식",
+          "openDate": "2022-02-18",
+          "closeDate": "2023-08-16",
+          "durationYears": 1.5,
+          "gapFromPrevMonths": null
+        },
+        {
+          "id": "store_21387",
+          "name": "신포면옥",
+          "business": "한식",
+          "openDate": "2001-06-05",
+          "closeDate": "2023-12-27",
+          "durationYears": 22.6,
+          "gapFromPrevMonths": 4.4
+        },
+        {
+          "id": "store_4499",
+          "name": "알파식당",
+          "business": "분식",
+          "openDate": "2014-05-20",
+          "closeDate": "2024-01-25",
+          "durationYears": 9.7,
+          "gapFromPrevMonths": 1
+        },
+        {
+          "id": "store_44963",
+          "name": "(주)공차코리아 대치점",
+          "business": "까페",
+          "openDate": "2014-07-03",
+          "closeDate": "2024-06-19",
+          "durationYears": 10,
+          "gapFromPrevMonths": 4.8
+        }
+      ]
+    }
+  ]
+}

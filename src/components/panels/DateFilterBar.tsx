@@ -11,6 +11,7 @@ export default function DateFilterBar() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [showCustom, setShowCustom] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const applyPreset = (months: number | null) => {
     if (months === null) {
@@ -70,17 +71,31 @@ export default function DateFilterBar() {
 
   return (
     <div className="bg-white rounded-lg shadow-md border border-slate-200 p-3">
-      <div className="flex items-center justify-between mb-2">
+      <div
+        className={`flex items-center justify-between ${collapsed ? "" : "mb-2"}`}
+      >
         <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
           📅 폐업 기간
         </h3>
-        {currentDong && (
-          <span className="text-xs text-blue-600 font-medium">
-            {currentDong}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {currentDong && (
+            <span className="text-xs text-blue-600 font-medium">
+              {currentDong}
+            </span>
+          )}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="w-7 h-7 flex items-center justify-center rounded text-slate-500 hover:bg-slate-100"
+            aria-label={collapsed ? "펼치기" : "접기"}
+            title={collapsed ? "펼치기" : "접기"}
+          >
+            <span className="text-sm">{collapsed ? "▾" : "▴"}</span>
+          </button>
+        </div>
       </div>
 
+      {!collapsed && (
+      <>
       <div className="flex gap-1.5 mb-2">
         <button
           onClick={() => applyPreset(3)}
@@ -145,6 +160,8 @@ export default function DateFilterBar() {
             </button>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

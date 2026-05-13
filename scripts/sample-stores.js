@@ -1,5 +1,14 @@
 const fs = require('fs');
 
+// ⚠️ DEPRECATED — 발표용 데이터에서는 *절대* 재실행 금지.
+// 1차 작업 시 동별 500개로 다운샘플링하던 스크립트. 현재 stores.json은 전체 34,797개 (실데이터).
+// 통계 정확도를 위해 재실행 시 백업 stores-full.json을 먼저 확인.
+if (!process.env.ALLOW_SAMPLE) {
+  console.error('❌ 이 스크립트는 동별 500개 cap을 강제 적용함. 통계 왜곡.');
+  console.error('   재실행 의도가 있으면 ALLOW_SAMPLE=1 환경변수와 함께 실행.');
+  process.exit(1);
+}
+
 console.log('📊 매장 데이터 샘플링 시작...\n');
 
 const stores = JSON.parse(fs.readFileSync('public/data/stores.json', 'utf-8'));

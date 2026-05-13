@@ -69,11 +69,6 @@ function FootTrafficCard({
         <p className="text-sm text-slate-700">{pattern}</p>
       </div>
 
-      <div className="mt-4">
-        <p className="text-xs text-blue-800 bg-blue-100 px-2.5 py-1.5 rounded-md border border-blue-300">
-          <span className="font-semibold">참고</span> · SKT 유동인구 (2024-2025, 추정치 ×1000)
-        </p>
-      </div>
     </div>
   );
 }

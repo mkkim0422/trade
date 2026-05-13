@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/precompute-paradox.js",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "precompute": "node scripts/precompute-paradox.js",
     "geocode": "node scripts/geocode-data.js"
   },
   "dependencies": {
@@ -17,8 +19,10 @@
     "next": "16.2.4",
     "proj4": "^2.20.8",
     "react": "19.2.4",
+    "react-countup": "^6.5.3",
     "react-dom": "19.2.4",
     "react-kakao-maps-sdk": "^1.2.1",
+    "recharts": "^3.8.1",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
